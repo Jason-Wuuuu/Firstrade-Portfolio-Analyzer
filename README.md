@@ -4,15 +4,23 @@ This project contains Jupyter notebooks for analyzing and visualizing your First
 
 ## Notebooks
 
-1. **Firstrade_History.ipynb**: 
+1. **Firstrade_History.ipynb**:
    This notebook recreates all transactions from your Firstrade account history. It allows you to view your portfolio composition on any given day. The notebook processes the transaction data, calculates realized gains, and provides a detailed view of your investment history.
 
-2. **Firstrade_Performance.ipynb**: 
+2. **Firstrade_Performance.ipynb**:
    This notebook focuses on analyzing the performance of your current portfolio. It calculates total costs, market values, and profit/loss metrics. Additionally, it generates visualizations of your portfolio's performance, including individual stock charts and overall portfolio returns.
+
+## Outputs
+
+<div style="display: flex; justify-content: space-between;">
+  <img src="./images/portfolio_performance.png" alt="Portfolio Performance" style="max-height: 400px; width: auto;">
+  <img src="./images/stock_comparison.png" alt="Stock Comparison" style="max-height: 400px; width: auto;">
+</div>
 
 ## Setup
 
 1. Install required packages:
+
    ```
    pip install -r requirements.txt
    ```

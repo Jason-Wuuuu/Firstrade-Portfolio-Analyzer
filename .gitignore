@@ -1,0 +1,28 @@
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]
+
+# Ignore virtual environment directories
+venv/
+env/
+ENV/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore log files
+*.log
+
+# Ignore Firstrade Jupyter Notebooks and requirements file
+FT_History.csv
+
+# Ignore other common files
+*.swp
+*.swo
+*.bak
+*.tmp
+*.temp

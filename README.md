@@ -1,6 +1,12 @@
 # Firstrade Portfolio Analysis
 
-This project contains Python scripts and a Jupyter notebook for analyzing and visualizing your Firstrade investment portfolio.
+This project offers a comprehensive suite of Python scripts and a Jupyter notebook for in-depth analysis and visualization of your Firstrade investment portfolio. By meticulously reconstructing your complete transaction history from the Firstrade CSV file, it enables:
+
+- Precise tracking of your portfolio's evolution from the very first trade
+- Detailed performance analysis over any time period
+- Accurate calculation of returns, including the compounding effects of dividends and reinvestments
+- Proper handling of corporate actions like stock splits
+- Insights into how different transaction types have impacted your overall performance
 
 ## Files
 

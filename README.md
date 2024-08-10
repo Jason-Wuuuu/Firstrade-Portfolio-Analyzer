@@ -1,14 +1,17 @@
 # Firstrade Portfolio Analysis
 
-This project contains Jupyter notebooks for analyzing and visualizing your Firstrade investment portfolio.
+This project contains Python scripts and a Jupyter notebook for analyzing and visualizing your Firstrade investment portfolio.
 
-## Notebooks
+## Files
 
-1. **Firstrade_History.ipynb**:
-   This notebook recreates all transactions from your Firstrade account history. It allows you to view your portfolio composition on any given day. The notebook processes the transaction data, calculates realized gains, and provides a detailed view of your investment history.
+1. **portfolio_analysis_dashboard.ipynb**:
+   This Jupyter notebook provides an interactive dashboard for analyzing your portfolio. It visualizes portfolio composition, performance metrics, and historical trends.
 
-2. **Firstrade_Performance.ipynb**:
-   This notebook focuses on analyzing the performance of your current portfolio. It calculates total costs, market values, and profit/loss metrics. Additionally, it generates visualizations of your portfolio's performance, including individual stock charts and overall portfolio returns.
+2. **transaction_history_processor.py**:
+   This Python script processes the transaction history from Firstrade, calculates portfolio states, and provides methods for viewing and saving portfolio data.
+
+3. **ft_history_processor.py**:
+   This script handles the initial processing of the Firstrade CSV history file, converting it into a structured JSON format for further analysis.
 
 ## Outputs
 
@@ -25,22 +28,41 @@ This project contains Jupyter notebooks for analyzing and visualizing your First
    pip install -r requirements.txt
    ```
 
-2. Download your transaction history from Firstrade and rename it to `FT_History.csv`. Place this file in the same directory as the notebooks.
+2. Download your transaction history from Firstrade as a CSV file and rename it to `FT_History.csv`. Place this file in the same directory as the scripts.
 
 ## Usage
 
-1. Open the desired notebook in Jupyter Lab or Jupyter Notebook.
-2. Run the cells in order to process your data and generate insights.
-3. Customize the date ranges or specific analyses as needed within the notebooks.
+1. Run the `ft_history_processor.py` script to convert the CSV file to a JSON format:
+
+   ```
+   python ft_history_processor.py
+   ```
+
+2. Run the `transaction_history_processor.py` script to process the JSON data and calculate portfolio states:
+
+   ```
+   python transaction_history_processor.py
+   ```
+
+3. Open the `portfolio_analysis_dashboard.ipynb` notebook in Jupyter Lab or Jupyter Notebook to interact with the dashboard and analyze your portfolio.
 
 ## Features
 
-- Transaction history processing
-- Portfolio composition at any given date
-- Realized and unrealized gain calculations
-- Performance visualizations
-- Comparison with market indices (e.g., S&P 500)
+- Transaction history processing from CSV to JSON
+- Portfolio state calculation and historical tracking
+- Integration with yfinance for fetching market data
+- Interactive visualizations of portfolio composition and performance
+- Analysis of individual stock performance within the portfolio
+
+## Outputs
+
+The scripts generate two main output files:
+
+- `transaction_history.json`: Processed transaction data
+- `portfolio_history.json`: Calculated portfolio states with market data
+
+The Jupyter notebook provides various charts and tables for portfolio analysis.
 
 ## Note
 
-Ensure that your Firstrade history file (`FT_History.csv`) is up to date for the most accurate analysis. The notebooks use this file as the primary data source for all calculations and visualizations.
+Ensure that your Firstrade history file (`FT_History.csv`) is up to date for the most accurate analysis. The scripts and notebook use this file as the primary data source for all calculations and visualizations.

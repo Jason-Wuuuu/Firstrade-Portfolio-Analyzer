@@ -110,11 +110,11 @@ When you run the `analyze_portfolio` function, you'll see output similar to the 
 
 ### Portfolio Summary:
 
-Cash: $5,000.00
-Total Market Value: $20,550.00
-Invested Value: $19,500.00
-Unrealized Gain/Loss: $1,050.00 (5.38%)
-Daily Gain: $105.00 (0.51%)
+- Cash: $5,000.00
+- Total Market Value: $20,550.00
+- Invested Value: $19,500.00
+- Unrealized Gain/Loss: $1,050.00 (5.38%)
+- Daily Gain: $105.00 (0.51%)
 
 ### Closed Positions
 

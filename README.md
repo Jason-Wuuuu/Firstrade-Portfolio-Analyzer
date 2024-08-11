@@ -11,13 +11,23 @@ This project offers a comprehensive suite of Python scripts and a Jupyter notebo
 ## Files
 
 1. **portfolio_analysis_dashboard.ipynb**:
-   This Jupyter notebook provides an interactive dashboard for analyzing your portfolio. It visualizes portfolio composition, performance metrics, and historical trends.
+   This Jupyter notebook provides an interactive dashboard for analyzing your portfolio. It visualizes portfolio composition, performance metrics, and historical trends using interactive Plotly charts.
 
 2. **transaction_history_processor.py**:
    This Python script processes the transaction history from Firstrade, calculates portfolio states, and provides methods for viewing and saving portfolio data.
 
 3. **ft_history_processor.py**:
    This script handles the initial processing of the Firstrade CSV history file, converting it into a structured JSON format for further analysis.
+
+## Interactive Visualizations
+
+The dashboard now features interactive Plotly charts, allowing for:
+
+- Zooming and panning on all charts
+- Hovering over data points for detailed information
+- Comparing portfolio performance against S&P 500 benchmark
+- Adjustable date ranges for focused analysis
+- Sector breakdown with detailed stock information on hover
 
 ## Outputs
 
@@ -57,8 +67,9 @@ This project offers a comprehensive suite of Python scripts and a Jupyter notebo
 - Transaction history processing from CSV to JSON
 - Portfolio state calculation and historical tracking
 - Integration with yfinance for fetching market data
-- Interactive visualizations of portfolio composition and performance
+- Interactive Plotly visualizations of portfolio composition and performance
 - Analysis of individual stock performance within the portfolio
+- Comparison of portfolio performance against S&P 500 benchmark
 
 ## Outputs
 
@@ -67,7 +78,7 @@ The scripts generate two main output files:
 - `transaction_history.json`: Processed transaction data
 - `portfolio_history.json`: Calculated portfolio states with market data
 
-The Jupyter notebook provides various charts and tables for portfolio analysis.
+The Jupyter notebook provides various interactive charts and tables for comprehensive portfolio analysis.
 
 ## Note
 

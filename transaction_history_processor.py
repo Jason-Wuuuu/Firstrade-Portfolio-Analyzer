@@ -1,52 +1,56 @@
 import json
 import datetime
-from decimal import Decimal
+from decimal import Decimal, getcontext
 from collections import defaultdict
 import yfinance as yf
 import logging
 import os
 import time
 import pandas as pd
+from typing import Dict, List, Any
+from dataclasses import dataclass
+
+# Set decimal precision
+getcontext().prec = 10
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 
+@dataclass
+class Holding:
+    quantity: Decimal
+    total_cost: Decimal
+
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
+        return super(DecimalEncoder, self).default(obj)
+
+
 class PortfolioHistory:
-    """
-    Manages and processes the portfolio transaction history, calculates portfolio states,
-    and provides methods for viewing and saving portfolio data.
-    """
-
     def __init__(self):
-        self.transaction_history = {}
-        self.portfolio_state = {}
-        self.filled_portfolio_state = {}
-        self.historical_data = None
-        self.sectors = {}
+        self.transaction_history: Dict[str, Any] = {}
+        self.portfolio_state: Dict[str, Any] = {}
+        self.filled_portfolio_state: Dict[str, Any] = {}
+        self.historical_data: pd.DataFrame = None
+        self.sectors: Dict[str, str] = {}
+        self.previous_state: Dict[str, Any] = None
+        self.split_adjusted_prices: Dict[str,
+                                         Dict[datetime.datetime, Decimal]] = {}
+        self.realized_gains: Decimal = Decimal('0')
 
-    def process_transaction_history(self, input_file='transaction_history.json', save_output=False, output_file='portfolio_history.json'):
-        """
-        Processes the transaction history from start to finish, including loading transactions,
-        calculating portfolio states, filling missing dates, fetching historical data,
-        and updating the portfolio with market prices.
-
-        :param input_file: Path to the input JSON file containing transaction history
-        :param save_output: Boolean flag to determine if output should be saved
-        :param output_file: Path to save the output JSON file if save_output is True
-        :return: The filled portfolio state dictionary
-        """
+    def process_transaction_history(self, input_file: str = 'transaction_history.json',
+                                    save_output: bool = False,
+                                    output_file: str = 'portfolio_history.json') -> Dict[str, Any]:
         try:
             self.load_transactions(input_file)
-            if not self.transaction_history:
-                raise ValueError(
-                    "No transactions were loaded from the JSON file.")
-
             self.calculate_portfolio_state()
-            if not self.portfolio_state:
-                raise ValueError("No portfolio state was calculated.")
-
             self.fill_missing_dates()
             self.fetch_historical_data()
             self.update_portfolio_with_market_prices()
@@ -61,12 +65,7 @@ class PortfolioHistory:
             logging.error(f"Error processing transaction history: {str(e)}")
             raise
 
-    def load_transactions(self, file_path):
-        """
-        Loads transactions from a JSON file.
-
-        :param file_path: Path to the JSON file containing transaction history
-        """
+    def load_transactions(self, file_path: str):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"JSON file not found: {file_path}")
 
@@ -86,85 +85,91 @@ class PortfolioHistory:
             raise
 
     def calculate_portfolio_state(self):
-        """
-        Calculates the portfolio state based on the loaded transaction history,
-        processing deposits, interests, dividends, splits, buys, sells, and reinvestments.
-        """
         portfolio_state = {}
         cash = Decimal('0')
-        holdings = defaultdict(
-            lambda: {'quantity': Decimal('0'), 'total_cost': Decimal('0')})
+        holdings: Dict[str, Holding] = defaultdict(
+            lambda: Holding(Decimal('0'), Decimal('0')))
+        realized_gains = Decimal('0')
 
         for date, transactions in self.transaction_history.items():
-            # Update cash
-            cash += Decimal(str(transactions['deposit'])) + Decimal(
-                str(transactions['interest'])) + Decimal(str(transactions['dividend']))
+            cash = self._update_cash(cash, transactions)
+            holdings = self._process_splits(holdings, transactions['split'])
+            cash, holdings = self._process_buys(
+                cash, holdings, transactions['buy'])
+            cash, holdings, realized_gains = self._process_sells(
+                cash, holdings, realized_gains, transactions['sell'])
+            holdings = self._process_reinvestments(
+                holdings, transactions['reinvestment'])
 
-            # Process splits
-            for symbol, split_data in transactions['split'].items():
-                if symbol in holdings:
-                    old_quantity = holdings[symbol]['quantity']
-                    new_quantity = old_quantity + \
-                        Decimal(str(split_data['quantity']))
-                    holdings[symbol]['quantity'] = new_quantity
-                    # total_cost remains unchanged after a split
-
-            # Process buys
-            for symbol, buys in transactions['buy'].items():
-                for buy in buys:
-                    quantity = Decimal(str(buy['quantity']))
-                    cost = abs(Decimal(str(buy['amount'])))
-                    holdings[symbol]['quantity'] += quantity
-                    holdings[symbol]['total_cost'] += cost
-                    cash -= cost
-
-            # Process sells
-            for symbol, sells in transactions['sell'].items():
-                for sell in sells:
-                    sell_quantity = abs(Decimal(str(sell['quantity'])))
-                    sell_amount = Decimal(str(sell['amount']))
-                    if holdings[symbol]['quantity'] > 0:
-                        current_quantity = holdings[symbol]['quantity']
-                        current_total_cost = holdings[symbol]['total_cost']
-                        avg_cost_per_share = current_total_cost / current_quantity
-
-                        cost_basis_sold = avg_cost_per_share * sell_quantity
-
-                        holdings[symbol]['quantity'] -= sell_quantity
-                        holdings[symbol]['total_cost'] -= cost_basis_sold
-
-                        cash += sell_amount
-
-            # Process reinvestments
-            for symbol, reinvests in transactions['reinvestment'].items():
-                for reinvest in reinvests:
-                    quantity = Decimal(str(reinvest['quantity']))
-                    cost = abs(Decimal(str(reinvest['amount'])))
-                    holdings[symbol]['quantity'] += quantity
-                    holdings[symbol]['total_cost'] += cost
-
-            # Create the portfolio state for this date
-            current_holdings = {}
-            for symbol, data in holdings.items():
-                if data['quantity'] > 0:
-                    current_holdings[symbol] = {
-                        'quantity': float(data['quantity']),
-                        'total_cost': float(data['total_cost']),
-                        'unit_cost': float(data['total_cost'] / data['quantity']) if data['quantity'] > 0 else 0
-                    }
-
-            portfolio_state[date] = {
-                'cash': float(cash),
-                'holdings': current_holdings
-            }
+            portfolio_state[date] = self._create_portfolio_state(
+                cash, holdings, realized_gains)
 
         self.portfolio_state = portfolio_state
+        self.realized_gains = realized_gains
+
+    def _update_cash(self, cash: Decimal, transactions: Dict[str, Any]) -> Decimal:
+        return cash + sum(Decimal(str(transactions[key])) for key in ['deposit', 'interest', 'dividend'])
+
+    def _process_splits(self, holdings: Dict[str, Holding], splits: Dict[str, Any]) -> Dict[str, Holding]:
+        for symbol, split_data in splits.items():
+            if symbol in holdings:
+                holdings[symbol].quantity += Decimal(
+                    str(split_data['quantity']))
+        return holdings
+
+    def _process_buys(self, cash: Decimal, holdings: Dict[str, Holding], buys: Dict[str, List[Dict[str, Any]]]) -> tuple:
+        for symbol, buy_list in buys.items():
+            for buy in buy_list:
+                quantity = Decimal(str(buy['quantity']))
+                cost = abs(Decimal(str(buy['amount'])))
+                holdings[symbol].quantity += quantity
+                holdings[symbol].total_cost += cost
+                cash -= cost
+        return cash, holdings
+
+    def _process_sells(self, cash: Decimal, holdings: Dict[str, Holding], realized_gains: Decimal,
+                       sells: Dict[str, List[Dict[str, Any]]]) -> tuple:
+        for symbol, sell_list in sells.items():
+            for sell in sell_list:
+                sell_quantity = abs(Decimal(str(sell['quantity'])))
+                sell_amount = Decimal(str(sell['amount']))
+                if holdings[symbol].quantity > 0:
+                    avg_cost_per_share = holdings[symbol].total_cost / \
+                        holdings[symbol].quantity
+                    cost_basis_sold = avg_cost_per_share * sell_quantity
+                    realized_gain = sell_amount - cost_basis_sold
+                    realized_gains += realized_gain
+
+                    holdings[symbol].quantity -= sell_quantity
+                    holdings[symbol].total_cost -= cost_basis_sold
+                    cash += sell_amount
+        return cash, holdings, realized_gains
+
+    def _process_reinvestments(self, holdings: Dict[str, Holding], reinvestments: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Holding]:
+        for symbol, reinvest_list in reinvestments.items():
+            for reinvest in reinvest_list:
+                quantity = Decimal(str(reinvest['quantity']))
+                cost = abs(Decimal(str(reinvest['amount'])))
+                holdings[symbol].quantity += quantity
+                holdings[symbol].total_cost += cost
+        return holdings
+
+    def _create_portfolio_state(self, cash: Decimal, holdings: Dict[str, Holding], realized_gains: Decimal) -> Dict[str, Any]:
+        current_holdings = {
+            symbol: {
+                'quantity': float(data.quantity),
+                'total_cost': float(data.total_cost),
+                'unit_cost': float(data.total_cost / data.quantity) if data.quantity > 0 else 0
+            }
+            for symbol, data in holdings.items() if data.quantity > 0
+        }
+        return {
+            'cash': float(cash),
+            'holdings': current_holdings,
+            'realized_gains': float(realized_gains)
+        }
 
     def fill_missing_dates(self):
-        """
-        Fills in missing dates in the portfolio state with the last known state,
-        ensuring a continuous daily record from the first transaction to the current date.
-        """
         dates = sorted(self.portfolio_state.keys())
         start_date = datetime.datetime.strptime(dates[0], '%Y-%m-%d').date()
         end_date = datetime.date.today()
@@ -179,27 +184,28 @@ class PortfolioHistory:
                 filled_portfolio_state[date_str] = self.portfolio_state[date_str]
                 last_state = self.portfolio_state[date_str]
             elif last_state is not None:
-                # Copy only quantity, total_cost, and unit_cost
-                filled_portfolio_state[date_str] = {
-                    'cash': last_state['cash'],
-                    'holdings': {
-                        symbol: {
-                            'quantity': data['quantity'],
-                            'total_cost': data['total_cost'],
-                            'unit_cost': data['unit_cost']
-                        }
-                        for symbol, data in last_state['holdings'].items()
-                    }
-                }
+                filled_portfolio_state[date_str] = self._copy_last_state(
+                    last_state)
 
             current_date += datetime.timedelta(days=1)
 
         self.filled_portfolio_state = filled_portfolio_state
 
+    def _copy_last_state(self, last_state: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            'cash': last_state['cash'],
+            'holdings': {
+                symbol: {
+                    'quantity': data['quantity'],
+                    'total_cost': data['total_cost'],
+                    'unit_cost': data['unit_cost']
+                }
+                for symbol, data in last_state['holdings'].items()
+            },
+            'realized_gains': last_state['realized_gains']
+        }
+
     def fetch_historical_data(self):
-        """
-        Fetches historical price data and sector information for all symbols in the portfolio using yfinance.
-        """
         try:
             first_date = min(self.filled_portfolio_state.keys())
             last_date = max(self.filled_portfolio_state.keys())
@@ -251,26 +257,44 @@ class PortfolioHistory:
                 f"Error fetching historical data and sector information: {str(e)}")
             raise
 
-    def get_unique_symbols(self):
-        """
-        Returns a sorted list of unique symbols present in the portfolio history.
-
-        :return: List of unique symbols
-        """
+    def get_unique_symbols(self) -> List[str]:
         unique_symbols = set()
         for date_data in self.filled_portfolio_state.values():
             unique_symbols.update(date_data['holdings'].keys())
         return sorted(unique_symbols)
 
     def update_portfolio_with_market_prices(self):
-        """
-        Updates the portfolio state with market prices from the fetched historical data,
-        adjusting for splits and removing dates where market data is not available.
-        """
         dates_to_remove = []
-        split_adjustments = {}
+        self.split_adjusted_prices = self._calculate_split_adjusted_prices()
 
-        # First, collect all split information
+        for date, state in self.filled_portfolio_state.items():
+            date_obj = datetime.datetime.strptime(date, '%Y-%m-%d')
+            if date_obj not in self.historical_data.index:
+                dates_to_remove.append(date)
+                continue
+
+            self._update_state_with_market_data(state, date_obj)
+            self.previous_state = state
+
+        for date in dates_to_remove:
+            del self.filled_portfolio_state[date]
+
+    def _calculate_split_adjusted_prices(self) -> Dict[str, Dict[datetime.datetime, Decimal]]:
+        split_adjusted_prices = {}
+        split_adjustments = self._collect_split_information()
+
+        for symbol in self.get_unique_symbols():
+            split_adjusted_prices[symbol] = {}
+            for date, price in self.historical_data[symbol].items():
+                adjusted_price = Decimal(str(price))
+                if symbol in split_adjustments and date < split_adjustments[symbol]['date']:
+                    adjusted_price *= split_adjustments[symbol]['ratio']
+                split_adjusted_prices[symbol][date] = adjusted_price
+
+        return split_adjusted_prices
+
+    def _collect_split_information(self) -> Dict[str, Dict[str, Any]]:
+        split_adjustments = {}
         for date, transactions in self.transaction_history.items():
             for symbol, split_data in transactions['split'].items():
                 additional_quantity = Decimal(str(split_data['quantity']))
@@ -290,38 +314,122 @@ class PortfolioHistory:
                             'date': split_date,
                             'ratio': split_ratio
                         }
+        return split_adjustments
 
-        for date, state in self.filled_portfolio_state.items():
-            date_obj = datetime.datetime.strptime(date, '%Y-%m-%d')
-            if date_obj not in self.historical_data.index:
-                dates_to_remove.append(date)
-                continue
+    def _update_state_with_market_data(self, state: Dict[str, Any], date_obj: datetime.datetime):
+        total_market_value, total_cost_basis, daily_gain = self._calculate_portfolio_metrics(
+            state, date_obj)
 
-            for symbol in state['holdings']:
-                if symbol in self.historical_data.columns:
-                    market_price = Decimal(
-                        str(self.historical_data.at[date_obj, symbol]))
+        cash = Decimal(str(state['cash']))
+        invested_value = total_market_value
+        total_portfolio_value = invested_value + cash
 
-                    # Adjust market price for splits
-                    if symbol in split_adjustments and date_obj < split_adjustments[symbol]['date']:
-                        # Multiply by ratio to adjust pre-split prices
-                        market_price *= split_adjustments[symbol]['ratio']
+        unrealized_gain_loss = invested_value - total_cost_basis
+        unrealized_gain_loss_percentage = (
+            unrealized_gain_loss / total_cost_basis * 100) if total_cost_basis != 0 else Decimal('0')
 
-                    state['holdings'][symbol]['market_price'] = float(
-                        market_price)
-                else:
-                    state['holdings'][symbol]['market_price'] = None
+        daily_return = self._calculate_daily_return(total_portfolio_value)
 
-        for date in dates_to_remove:
-            del self.filled_portfolio_state[date]
+        self._update_state_metrics(state, total_portfolio_value, invested_value, total_cost_basis, daily_gain,
+                                   unrealized_gain_loss, unrealized_gain_loss_percentage, daily_return)
 
-    def view_portfolio_on_date(self, date):
-        """
-        Returns the portfolio state for a specific date.
+    def _calculate_portfolio_metrics(self, state: Dict[str, Any], date_obj: datetime.datetime) -> tuple:
+        total_market_value = Decimal('0')
+        total_cost_basis = Decimal('0')
+        daily_gain = Decimal('0')
 
-        :param date: Date string in 'YYYY-MM-DD' format
-        :return: Portfolio state on the given date or a message if no data is available
-        """
+        for symbol, holding in state['holdings'].items():
+            try:
+                market_price = self.split_adjusted_prices[symbol][date_obj]
+                quantity = Decimal(str(holding['quantity']))
+                total_cost = Decimal(str(holding['total_cost']))
+
+                current_market_value = market_price * quantity
+                total_market_value += current_market_value
+                total_cost_basis += total_cost
+
+                holding_daily_gain = self._calculate_holding_daily_gain(
+                    symbol, current_market_value, quantity)
+                daily_gain += holding_daily_gain
+
+                holding_daily_return = self._calculate_holding_daily_return(
+                    symbol, current_market_value)
+
+                self._update_holding_metrics(holding, quantity, total_cost, market_price,
+                                             current_market_value, holding_daily_gain, holding_daily_return)
+            except KeyError:
+                logging.warning(f"No market data available for {
+                                symbol} on {date_obj}")
+                self._update_holding_without_market_data(holding)
+
+        return total_market_value, total_cost_basis, daily_gain
+
+    def _calculate_holding_daily_gain(self, symbol: str, current_market_value: Decimal, quantity: Decimal) -> Decimal:
+        if self.previous_state and symbol in self.previous_state['holdings']:
+            previous_market_value = Decimal(
+                str(self.previous_state['holdings'][symbol]['market_price'])) * quantity
+            return current_market_value - previous_market_value
+        return Decimal('0')
+
+    def _calculate_holding_daily_return(self, symbol: str, current_market_value: Decimal) -> Decimal:
+        if self.previous_state and symbol in self.previous_state['holdings']:
+            previous_market_value = Decimal(
+                str(self.previous_state['holdings'][symbol]['market_value']))
+            if previous_market_value != 0:
+                return (current_market_value - previous_market_value) / previous_market_value
+        return Decimal('0')
+
+    def _calculate_daily_return(self, total_portfolio_value: Decimal) -> Decimal:
+        if self.previous_state:
+            previous_total_portfolio_value = Decimal(
+                str(self.previous_state['total_market_value']))
+            if previous_total_portfolio_value != 0:
+                return (total_portfolio_value - previous_total_portfolio_value) / previous_total_portfolio_value
+        return Decimal('0')
+
+    def _update_state_metrics(self, state: Dict[str, Any], total_portfolio_value: Decimal, invested_value: Decimal,
+                              total_cost_basis: Decimal, daily_gain: Decimal, unrealized_gain_loss: Decimal,
+                              unrealized_gain_loss_percentage: Decimal, daily_return: Decimal):
+        cash = Decimal(str(state['cash']))
+
+        state['total_market_value'] = float(total_portfolio_value)
+        state['cash'] = float(cash)
+        state['invested_value'] = float(invested_value)
+        state['total_cost_basis'] = float(total_cost_basis)
+        state['unrealized_gain_loss'] = float(unrealized_gain_loss)
+        state['unrealized_gain_loss_percentage'] = float(
+            unrealized_gain_loss_percentage)
+        state['realized_gains'] = float(self.realized_gains)
+        state['total_gain_loss'] = float(
+            unrealized_gain_loss + self.realized_gains)
+        state['daily_gain'] = float(daily_gain)
+        state['daily_return'] = float(daily_return)
+        state['holdings'] = state['holdings']  # Keep existing holdings data
+
+    def _update_holding_metrics(self, holding: Dict[str, Any], quantity: Decimal, total_cost: Decimal, market_price: Decimal,
+                                current_market_value: Decimal, daily_gain: Decimal, daily_return: Decimal):
+        holding['quantity'] = float(quantity)
+        holding['total_cost'] = float(total_cost)
+        holding['unit_cost'] = float(
+            total_cost / quantity) if quantity > 0 else 0
+        holding['market_price'] = float(market_price)
+        holding['market_value'] = float(current_market_value)
+        holding['unrealized_gain_loss'] = float(
+            current_market_value - total_cost)
+        holding['unrealized_gain_loss_percentage'] = float(
+            (current_market_value - total_cost) / total_cost * 100) if total_cost > 0 else 0
+        holding['daily_gain'] = float(daily_gain)
+        holding['daily_return'] = float(daily_return)
+
+    def _update_holding_without_market_data(self, holding: Dict[str, Any]):
+        holding['market_price'] = None
+        holding['market_value'] = None
+        holding['unrealized_gain_loss'] = None
+        holding['unrealized_gain_loss_percentage'] = None
+        holding['daily_gain'] = 0.0
+        holding['daily_return'] = 0.0
+
+    def view_portfolio_on_date(self, date: str) -> Dict[str, Any]:
         try:
             date_obj = datetime.datetime.strptime(date, '%Y-%m-%d').date()
             date_str = date_obj.strftime('%Y-%m-%d')
@@ -333,12 +441,7 @@ class PortfolioHistory:
         else:
             return "No portfolio data available for this date."
 
-    def pretty_print_portfolio(self, portfolio_data):
-        """
-        Prints a formatted JSON representation of the portfolio data.
-
-        :param portfolio_data: Portfolio data to be printed
-        """
+    def pretty_print_portfolio(self, portfolio_data: Dict[str, Any]):
         def default_serializer(obj):
             if isinstance(obj, (datetime.datetime, datetime.date)):
                 return obj.isoformat()
@@ -348,20 +451,17 @@ class PortfolioHistory:
 
         print(json.dumps(portfolio_data, indent=4, default=default_serializer))
 
-    def save_to_json(self, file_path):
-        """
-        Saves the filled portfolio state and sectors to a JSON file.
-
-        :param file_path: Path to save the JSON file
-        """
+    def save_to_json(self, file_path: str):
         try:
             output_data = {
+                "version": "1.0",
+                "timestamp": datetime.datetime.now().isoformat(),
                 "sectors": self.sectors,
                 "portfolios": self.filled_portfolio_state
             }
 
             with open(file_path, 'w') as file:
-                json.dump(output_data, file, indent=2, default=str)
+                json.dump(output_data, file, indent=2, cls=DecimalEncoder)
             logging.info(f"Portfolio history and sectors saved to {file_path}")
         except IOError as e:
             logging.error(f"Unable to write to file {file_path}: {str(e)}")
@@ -375,10 +475,16 @@ if __name__ == "__main__":
         portfolio_history.process_transaction_history(
             save_output=True, output_file='portfolio_history.json')
 
-        # Example usage of new functions
-        date_to_view = max(portfolio_history.filled_portfolio_state.keys())
-        portfolio_on_date = portfolio_history.view_portfolio_on_date(
-            date_to_view)
-        portfolio_history.pretty_print_portfolio(portfolio_on_date)
+        # Get the latest date
+        last_date = max(portfolio_history.filled_portfolio_state.keys())
+
+        # Get the portfolio state for the latest date
+        last_portfolio_state = portfolio_history.view_portfolio_on_date(
+            last_date)
+
+        # Use pretty_print_portfolio to print the latest portfolio state
+        print(f"\nPortfolio state on {last_date}:")
+        portfolio_history.pretty_print_portfolio(last_portfolio_state)
+
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}")

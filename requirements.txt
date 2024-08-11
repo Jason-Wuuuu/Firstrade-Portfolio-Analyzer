@@ -5,3 +5,4 @@ seaborn
 jupyter
 ipykernel
 yfinance
+plotly

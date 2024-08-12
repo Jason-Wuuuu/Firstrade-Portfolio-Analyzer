@@ -214,7 +214,7 @@ class PortfolioHistory:
         for symbol, buy_list in buys.items():
             for buy in buy_list:
                 quantity = Decimal(str(buy['quantity']))
-                cost = abs(Decimal(str(buy['amount'])))
+                cost = Decimal(str(buy['amount']))
                 holdings[symbol].quantity += quantity
                 holdings[symbol].total_cost += cost
                 cash -= cost
@@ -237,9 +237,11 @@ class PortfolioHistory:
         new_closed_positions = {}
         for symbol, sell_list in sells.items():
             for sell in sell_list:
-                sell_quantity = abs(Decimal(str(sell['quantity'])))
+                sell_quantity = Decimal(str(sell['quantity']))
                 sell_amount = Decimal(str(sell['amount']))
-                if holdings[symbol].quantity > 0:
+                sell_price = Decimal(str(sell['price']))
+
+                if holdings[symbol].quantity >= sell_quantity:
                     avg_cost_per_share = holdings[symbol].total_cost / \
                         holdings[symbol].quantity
                     cost_basis_sold = avg_cost_per_share * sell_quantity
@@ -254,10 +256,14 @@ class PortfolioHistory:
                         new_closed_positions[symbol] = []
                     new_closed_positions[symbol].append({
                         'quantity': sell_quantity,
-                        'sell_price': sell_amount / sell_quantity,
+                        'sell_price': sell_price,
                         'cost_basis': cost_basis_sold,
                         'realized_gain': realized_gain
                     })
+                else:
+                    # Handle error: trying to sell more shares than owned
+                    logging.error(f"Attempted to sell {sell_quantity} shares of {
+                                  symbol}, but only {holdings[symbol].quantity} owned.")
 
         return cash, holdings, realized_gains, new_closed_positions
 
@@ -275,7 +281,7 @@ class PortfolioHistory:
         for symbol, reinvest_list in reinvestments.items():
             for reinvest in reinvest_list:
                 quantity = Decimal(str(reinvest['quantity']))
-                cost = abs(Decimal(str(reinvest['amount'])))
+                cost = Decimal(str(reinvest['amount']))
                 holdings[symbol].quantity += quantity
                 holdings[symbol].total_cost += cost
         return holdings
@@ -793,3 +799,6 @@ if __name__ == "__main__":
 
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}")
+
+        print(f"\nPortfolio state on {last_date}:")
+        portfolio_history.pretty_print_portfolio(last_portfolio_state)

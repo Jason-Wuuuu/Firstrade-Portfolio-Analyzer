@@ -22,9 +22,10 @@ class Transaction:
             self.record_type = row['RecordType']
             self.action = row['Action']
             self.symbol = row['Symbol'].strip()
-            self.quantity = float(row['Quantity']) if row['Quantity'] else 0
+            self.quantity = abs(
+                float(row['Quantity'])) if row['Quantity'] else 0
             self.price = float(row['Price']) if row['Price'] else 0
-            self.amount = float(row['Amount']) if row['Amount'] else 0
+            self.amount = abs(float(row['Amount'])) if row['Amount'] else 0
             self.description = row['Description']
             self.cusip = row['CUSIP']
         except KeyError as e:
@@ -197,7 +198,7 @@ class TransactionHistory:
         self.history[trade_date]['reinvestment'][transaction.symbol].append({
             'quantity': transaction.quantity,
             'price': rein_price,
-            'amount': abs(transaction.amount)
+            'amount': transaction.amount
         })
         reinvestment_cusips.add(transaction.cusip)
 

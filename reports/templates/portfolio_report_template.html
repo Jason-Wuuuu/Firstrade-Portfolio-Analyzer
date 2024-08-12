@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portfolio Analysis Report - {date}</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+      /* CSS_PLACEHOLDER */
+    </style>
+  </head>
+  <body>
+    <h1>Portfolio Analysis Report - {date}</h1>
+    <div id="portfolio-analysis" class="section">
+      <h3>Portfolio Summary</h3>
+      <div id="portfolio-summary">
+        <table class="summary-table">
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+          </tr>
+          <tr>
+            <td>Cash</td>
+            <td>{cash}</td>
+          </tr>
+          <tr>
+            <td>Total Market Value</td>
+            <td>{total_market_value}</td>
+          </tr>
+          <tr>
+            <td>Invested Value</td>
+            <td>{invested_value}</td>
+          </tr>
+          <tr>
+            <td>Unrealized Gain/Loss</td>
+            <td>{unrealized_gain_loss}</td>
+          </tr>
+          <tr>
+            <td>Daily Gain</td>
+            <td>{daily_gain}</td>
+          </tr>
+          <tr>
+            <td>Total Realized Gains</td>
+            <td>{total_realized_gains}</td>
+          </tr>
+        </table>
+      </div>
+      <h3>Portfolio Details</h3>
+      <div id="portfolio-table">{portfolio_table}</div>
+    </div>
+
+    <div class="section">
+      <h3>Closed Positions</h3>
+      <div id="closed-positions-table">{closed_positions_table}</div>
+    </div>
+
+    <div class="plot-container section">
+      <div id="stock-proportions" class="plot-half"></div>
+      <div id="sector-proportions" class="plot-half"></div>
+    </div>
+    <div id="portfolio-growth" class="plot section"></div>
+
+    <script>
+      Plotly.newPlot("stock-proportions", { stock_proportions_plot });
+      Plotly.newPlot("sector-proportions", { sector_proportions_plot });
+      Plotly.newPlot("portfolio-growth", { portfolio_growth_plot });
+    </script>
+  </body>
+</html>

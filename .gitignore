@@ -22,6 +22,12 @@ FT_History.csv
 transaction_history.json
 portfolio_history.json
 
+# Ignore everything in the reports directory
+/reports/*
+
+# But don't ignore the templates directory
+!/reports/templates/
+
 # Ignore other common files
 *.swp
 *.swo

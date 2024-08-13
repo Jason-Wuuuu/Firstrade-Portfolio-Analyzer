@@ -67,11 +67,14 @@
       <div id="sector-proportions" class="plot-half"></div>
     </div>
     <div id="portfolio-growth" class="plot section"></div>
+    <div id="asset-allocation" class="plot-full section"></div>
+    <!-- New plot section -->
 
     <script>
       Plotly.newPlot("stock-proportions", { stock_proportions_plot });
       Plotly.newPlot("sector-proportions", { sector_proportions_plot });
       Plotly.newPlot("portfolio-growth", { portfolio_growth_plot });
+      Plotly.newPlot("asset-allocation", { asset_allocation_plot }); <!-- New plot script -->
     </script>
   </body>
 </html>

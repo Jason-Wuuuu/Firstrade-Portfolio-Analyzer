@@ -148,24 +148,22 @@ class PortfolioHistory:
             lambda: Holding(Decimal('0'), Decimal('0')))
         cumulative_realized_gains = Decimal('0')
         cumulative_deposits = Decimal('0')
-        closed_positions = {}
 
         for date, transactions in self.transaction_history.items():
             cash = self._update_cash(cash, transactions)
             holdings = self._process_splits(holdings, transactions['split'])
             cash, holdings = self._process_buys(
                 cash, holdings, transactions['buy'])
-            cash, holdings, realized_gains, new_closed_positions = self._process_sells(
+            cash, holdings, realized_gains = self._process_sells(
                 cash, holdings, transactions['sell'])
             holdings = self._process_reinvestments(
                 holdings, transactions['reinvestment'])
 
             cumulative_realized_gains += realized_gains
             cumulative_deposits += Decimal(str(transactions['deposit']))
-            closed_positions.update(new_closed_positions)
 
             portfolio_state[date] = self._create_portfolio_state(
-                cash, holdings, cumulative_realized_gains, cumulative_deposits, closed_positions)
+                cash, holdings, cumulative_realized_gains, cumulative_deposits)
 
         self.portfolio_state = portfolio_state
 
@@ -231,15 +229,13 @@ class PortfolioHistory:
             sells (Dict[str, List[Dict[str, Any]]]): Sell transaction data.
 
         Returns:
-            tuple: Updated cash balance, holdings, realized gains, and new closed positions.
+            tuple: Updated cash balance, holdings, and realized gains.
         """
         realized_gains = Decimal('0')
-        new_closed_positions = {}
         for symbol, sell_list in sells.items():
             for sell in sell_list:
                 sell_quantity = Decimal(str(sell['quantity']))
                 sell_amount = Decimal(str(sell['amount']))
-                sell_price = Decimal(str(sell['price']))
 
                 if holdings[symbol].quantity >= sell_quantity:
                     avg_cost_per_share = holdings[symbol].total_cost / \
@@ -251,21 +247,12 @@ class PortfolioHistory:
                     holdings[symbol].quantity -= sell_quantity
                     holdings[symbol].total_cost -= cost_basis_sold
                     cash += sell_amount
-
-                    if symbol not in new_closed_positions:
-                        new_closed_positions[symbol] = []
-                    new_closed_positions[symbol].append({
-                        'quantity': sell_quantity,
-                        'sell_price': sell_price,
-                        'cost_basis': cost_basis_sold,
-                        'realized_gain': realized_gain
-                    })
                 else:
                     # Handle error: trying to sell more shares than owned
                     logging.error(f"Attempted to sell {sell_quantity} shares of {
                                   symbol}, but only {holdings[symbol].quantity} owned.")
 
-        return cash, holdings, realized_gains, new_closed_positions
+        return cash, holdings, realized_gains
 
     def _process_reinvestments(self, holdings: Dict[str, Holding], reinvestments: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Holding]:
         """
@@ -287,8 +274,7 @@ class PortfolioHistory:
         return holdings
 
     def _create_portfolio_state(self, cash: Decimal, holdings: Dict[str, Holding],
-                                cumulative_realized_gains: Decimal, cumulative_deposits: Decimal,
-                                closed_positions: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
+                                cumulative_realized_gains: Decimal, cumulative_deposits: Decimal) -> Dict[str, Any]:
         """
         Create a portfolio state snapshot for a given point in time.
 
@@ -297,7 +283,6 @@ class PortfolioHistory:
             holdings (Dict[str, Holding]): Current holdings.
             cumulative_realized_gains (Decimal): Current cumulative realized gains.
             cumulative_deposits (Decimal): Total deposits made.
-            closed_positions (Dict[str, List[Dict[str, Any]]]): Closed positions data.
 
         Returns:
             Dict[str, Any]: A snapshot of the portfolio state.
@@ -317,8 +302,7 @@ class PortfolioHistory:
                 'total_deposits': cumulative_deposits,
                 'realized_gains': cumulative_realized_gains,
             },
-            'holdings': current_holdings,
-            'closed_positions': closed_positions
+            'holdings': current_holdings
         }
 
     def fill_missing_dates(self):
@@ -370,8 +354,7 @@ class PortfolioHistory:
                     'unit_cost': data['unit_cost']
                 }
                 for symbol, data in last_state['holdings'].items()
-            },
-            'closed_positions': last_state['closed_positions']
+            }
         }
 
     def fetch_historical_data(self):
@@ -693,8 +676,7 @@ class PortfolioHistory:
                 'cumulative_return': cumulative_return,
                 'roi': portfolio_metrics['roi'],  # Add ROI to the summary
             },
-            'holdings': state['holdings'],
-            'closed_positions': state['closed_positions']
+            'holdings': state['holdings']
         })
 
     def _update_holding_metrics(self, holding: Dict[str, Any], metrics: Dict[str, Decimal]):

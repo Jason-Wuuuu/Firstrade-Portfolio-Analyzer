@@ -11,6 +11,9 @@
   </head>
   <body>
     <h1>Portfolio Analysis Report - {date}</h1>
+
+    <div id="portfolio-growth" class="plot section"></div>
+
     <div id="portfolio-analysis" class="section">
       <h3>Portfolio Summary</h3>
       <div id="portfolio-summary">
@@ -53,28 +56,39 @@
           </tr>
         </table>
       </div>
-      <h3>Portfolio Details</h3>
+    </div>
+
+    <div id="position-analysis" class="section">
+      <div class="plot-container section">
+        <div id="stock-proportions" class="plot-half"></div>
+        <div id="sector-proportions" class="plot-half"></div>
+      </div>
+    </div>
+
+    <div id="position-analysis" class="section">
+      <h3>Current Portfolio</h3>
       <div id="portfolio-table">{portfolio_table}</div>
     </div>
 
-    <div class="section">
+    <div id="asset-allocation" class="plot-full section"></div>
+
+    <div id="position-analysis" class="section">
       <h3>Closed Positions</h3>
       <div id="closed-positions-table">{closed_positions_table}</div>
     </div>
 
-    <div class="plot-container section">
-      <div id="stock-proportions" class="plot-half"></div>
-      <div id="sector-proportions" class="plot-half"></div>
+    <div id="position-analysis" class="section">
+      <h3>Partially Sold Positions</h3>
+      <div id="partially-sold-positions-table">
+        {partially_sold_positions_table}
+      </div>
     </div>
-    <div id="portfolio-growth" class="plot section"></div>
-    <div id="asset-allocation" class="plot-full section"></div>
-    <!-- New plot section -->
 
     <script>
       Plotly.newPlot("stock-proportions", { stock_proportions_plot });
       Plotly.newPlot("sector-proportions", { sector_proportions_plot });
       Plotly.newPlot("portfolio-growth", { portfolio_growth_plot });
-      Plotly.newPlot("asset-allocation", { asset_allocation_plot }); <!-- New plot script -->
+      Plotly.newPlot("asset-allocation", { asset_allocation_plot });
     </script>
   </body>
 </html>

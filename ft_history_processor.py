@@ -114,6 +114,9 @@ class TransactionHistory:
 
             transactions = [Transaction(row) for _, row in df.iterrows()]
             for transaction in transactions:
+                if transaction.symbol == 'BRKB':
+                    transaction.symbol = 'BRK-B'
+
                 self.add_transaction(transaction)
 
             logging.info(f"Successfully loaded {
@@ -166,8 +169,8 @@ class TransactionHistory:
                 self._process_sell(trade_date, transaction)
         elif transaction.record_type == 'Financial':
             if transaction.action == 'Other':
-                if 'DEPOSIT' in transaction.description:
-                    self.history[trade_date]['deposit'] += transaction.amount
+                if any(keyword in transaction.description for keyword in ['DEPOSIT', 'Wire Funds Received', 'REBATE']):
+                    self._process_deposit(trade_date, transaction)
                 elif 'REIN' in transaction.description:
                     self._process_reinvestment(
                         trade_date, transaction, reinvestment_cusips)
@@ -175,6 +178,14 @@ class TransactionHistory:
                 self.history[trade_date]['interest'] += transaction.amount
             elif transaction.action == 'Dividend':
                 pending_dividends[transaction.cusip] += transaction.amount
+
+    def _process_deposit(self, trade_date, transaction):
+        """
+        Processes a deposit transaction.
+        """
+        self.history[trade_date]['deposit'] += transaction.amount
+        # logging.info(f"Processed deposit: {
+        #     transaction.description} - Amount: {transaction.amount}")
 
     def _process_stock_split(self, trade_date, transaction):
         self.history[trade_date]['split'][transaction.symbol]['quantity'] += transaction.quantity

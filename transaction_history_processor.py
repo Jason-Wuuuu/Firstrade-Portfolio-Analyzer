@@ -1,5 +1,6 @@
 import json
 import datetime
+import math
 from decimal import Decimal, getcontext
 from collections import defaultdict
 import yfinance as yf
@@ -620,15 +621,25 @@ class PortfolioHistory:
                 return (current_market_value - previous_market_value) / previous_market_value
         return Decimal('0')
 
-    def _calculate_daily_return(self, total_portfolio_value: Decimal, previous_state: Dict[str, Any]) -> Decimal:
+    def _calculate_daily_gain(self, current_total_value: Decimal, previous_state: Dict[str, Any]) -> Decimal:
         """
-        Calculate the daily return for the entire portfolio.
+        Calculate the daily gain for the entire portfolio, handling cases where previous value might not exist.
         """
         if previous_state:
-            previous_total_portfolio_value = Decimal(
-                str(previous_state['summary']['total_portfolio_value']))
-            if previous_total_portfolio_value != 0:
-                return (total_portfolio_value - previous_total_portfolio_value) / previous_total_portfolio_value
+            previous_total_value = Decimal(str(previous_state['summary'].get(
+                'total_portfolio_value', current_total_value)))
+            return current_total_value - previous_total_value
+        return Decimal('0')
+
+    def _calculate_daily_return(self, current_total_value: Decimal, previous_state: Dict[str, Any]) -> Decimal:
+        """
+        Calculate the daily return for the entire portfolio, handling cases where previous value might be zero or NaN.
+        """
+        if previous_state:
+            previous_total_value = Decimal(
+                str(previous_state['summary'].get('total_portfolio_value', 0)))
+            if previous_total_value and previous_total_value != 0:
+                return (current_total_value - previous_total_value) / previous_total_value
         return Decimal('0')
 
     def _calculate_total_return(self, total_portfolio_value: Decimal, total_deposits: Decimal) -> Decimal:
@@ -646,12 +657,34 @@ class PortfolioHistory:
 
     def _update_state_metrics(self, state: Dict[str, Any], portfolio_metrics: Dict[str, Decimal], previous_state: Dict[str, Any]):
         """
-        Update the portfolio state with calculated metrics.
+        Update the portfolio state with calculated metrics, excluding holdings with NaN values.
         """
         total_deposits = state['summary']['total_deposits']
         realized_gains = state['summary']['realized_gains']
-        total_portfolio_value = portfolio_metrics['total_portfolio_value']
-        total_cost_basis = portfolio_metrics['total_cost_basis']
+
+        # Filter out holdings with NaN values
+        valid_holdings = {symbol: holding for symbol, holding in state['holdings'].items()
+                          if holding['market_value'] is not None and not math.isnan(float(holding['market_value']))}
+
+        # Recalculate total market value and total cost basis for valid holdings
+        total_market_value = sum(
+            Decimal(str(holding['market_value'])) for holding in valid_holdings.values())
+        total_cost_basis = sum(
+            Decimal(str(holding['total_cost'])) for holding in valid_holdings.values())
+
+        # Update portfolio metrics with recalculated values
+        portfolio_metrics['total_market_value'] = total_market_value
+        portfolio_metrics['total_cost_basis'] = total_cost_basis
+
+        cash = portfolio_metrics['cash']
+        total_portfolio_value = total_market_value + cash
+        unrealized_gain_loss = total_market_value - total_cost_basis
+
+        # Calculate daily return and daily gain
+        daily_return = self._calculate_daily_return(
+            total_portfolio_value, previous_state)
+        daily_gain = self._calculate_daily_gain(
+            total_portfolio_value, previous_state)
 
         # Calculate total return (based on deposits)
         total_return = self._calculate_total_return(
@@ -661,20 +694,23 @@ class PortfolioHistory:
         cumulative_return = self._calculate_cumulative_return(
             total_portfolio_value, total_cost_basis)
 
+        # Calculate ROI
+        roi = self._calculate_roi(total_market_value, total_cost_basis)
+
         state.update({
             'summary': {
-                'total_market_value': portfolio_metrics['total_market_value'],
+                'total_market_value': total_market_value,
                 'total_portfolio_value': total_portfolio_value,
-                'cash': portfolio_metrics['cash'],
+                'cash': cash,
                 'total_cost_basis': total_cost_basis,
-                'unrealized_gain_loss': portfolio_metrics['unrealized_gain_loss'],
-                'daily_gain': portfolio_metrics['daily_gain'],
-                'daily_return': portfolio_metrics['daily_return'],
+                'unrealized_gain_loss': unrealized_gain_loss,
+                'daily_gain': daily_gain,
+                'daily_return': daily_return,
                 'total_deposits': total_deposits,
                 'realized_gains': realized_gains,
                 'total_return': total_return,
                 'cumulative_return': cumulative_return,
-                'roi': portfolio_metrics['roi'],  # Add ROI to the summary
+                'roi': roi,
             },
             'holdings': state['holdings']
         })

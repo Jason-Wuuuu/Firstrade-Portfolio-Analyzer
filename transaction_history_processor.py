@@ -147,7 +147,6 @@ class PortfolioHistory:
         cash = Decimal('0')
         holdings: Dict[str, Holding] = defaultdict(
             lambda: Holding(Decimal('0'), Decimal('0')))
-        cumulative_realized_gains = Decimal('0')
         cumulative_deposits = Decimal('0')
 
         for date, transactions in self.transaction_history.items():
@@ -155,16 +154,15 @@ class PortfolioHistory:
             holdings = self._process_splits(holdings, transactions['split'])
             cash, holdings = self._process_buys(
                 cash, holdings, transactions['buy'])
-            cash, holdings, realized_gains = self._process_sells(
+            cash, holdings = self._process_sells(
                 cash, holdings, transactions['sell'])
             holdings = self._process_reinvestments(
                 holdings, transactions['reinvestment'])
 
-            cumulative_realized_gains += realized_gains
             cumulative_deposits += Decimal(str(transactions['deposit']))
 
             portfolio_state[date] = self._create_portfolio_state(
-                cash, holdings, cumulative_realized_gains, cumulative_deposits)
+                cash, holdings, cumulative_deposits)
 
         self.portfolio_state = portfolio_state
 
@@ -232,7 +230,6 @@ class PortfolioHistory:
         Returns:
             tuple: Updated cash balance, holdings, and realized gains.
         """
-        realized_gains = Decimal('0')
         for symbol, sell_list in sells.items():
             for sell in sell_list:
                 sell_quantity = Decimal(str(sell['quantity']))
@@ -242,8 +239,6 @@ class PortfolioHistory:
                     avg_cost_per_share = holdings[symbol].total_cost / \
                         holdings[symbol].quantity
                     cost_basis_sold = avg_cost_per_share * sell_quantity
-                    realized_gain = sell_amount - cost_basis_sold
-                    realized_gains += realized_gain
 
                     holdings[symbol].quantity -= sell_quantity
                     holdings[symbol].total_cost -= cost_basis_sold
@@ -253,7 +248,7 @@ class PortfolioHistory:
                     logging.error(f"Attempted to sell {sell_quantity} shares of {
                                   symbol}, but only {holdings[symbol].quantity} owned.")
 
-        return cash, holdings, realized_gains
+        return cash, holdings
 
     def _process_reinvestments(self, holdings: Dict[str, Holding], reinvestments: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Holding]:
         """
@@ -275,14 +270,13 @@ class PortfolioHistory:
         return holdings
 
     def _create_portfolio_state(self, cash: Decimal, holdings: Dict[str, Holding],
-                                cumulative_realized_gains: Decimal, cumulative_deposits: Decimal) -> Dict[str, Any]:
+                                cumulative_deposits: Decimal) -> Dict[str, Any]:
         """
         Create a portfolio state snapshot for a given point in time.
 
         Args:
             cash (Decimal): Current cash balance.
             holdings (Dict[str, Holding]): Current holdings.
-            cumulative_realized_gains (Decimal): Current cumulative realized gains.
             cumulative_deposits (Decimal): Total deposits made.
 
         Returns:
@@ -301,7 +295,6 @@ class PortfolioHistory:
             'summary': {
                 'cash': cash,
                 'total_deposits': cumulative_deposits,
-                'realized_gains': cumulative_realized_gains,
             },
             'holdings': current_holdings
         }
@@ -346,7 +339,6 @@ class PortfolioHistory:
             'summary': {
                 'cash': last_state['summary']['cash'],
                 'total_deposits': last_state['summary']['total_deposits'],
-                'realized_gains': last_state['summary']['realized_gains'],
             },
             'holdings': {
                 symbol: {
@@ -660,7 +652,6 @@ class PortfolioHistory:
         Update the portfolio state with calculated metrics, excluding holdings with NaN values.
         """
         total_deposits = state['summary']['total_deposits']
-        realized_gains = state['summary']['realized_gains']
 
         # Filter out holdings with NaN values
         valid_holdings = {symbol: holding for symbol, holding in state['holdings'].items()
@@ -707,7 +698,6 @@ class PortfolioHistory:
                 'daily_gain': daily_gain,
                 'daily_return': daily_return,
                 'total_deposits': total_deposits,
-                'realized_gains': realized_gains,
                 'total_return': total_return,
                 'cumulative_return': cumulative_return,
                 'roi': roi,

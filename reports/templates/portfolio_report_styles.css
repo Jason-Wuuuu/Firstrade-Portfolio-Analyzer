@@ -128,8 +128,29 @@ tr:hover {
   }
 }
 
-/* Tablet and desktop styles */
-@media (min-width: 768px) {
+/* Tablet-specific styles */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .plot-item {
+    width: 100%; /* Make plots full width on tablets */
+  }
+
+  .plot-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+  }
+
+  .plot-scroll-container > div {
+    min-width: 700px; /* Adjust this value to prevent squeezing */
+  }
+
+  .wide-plot > div {
+    min-width: 800px; /* Adjust this value for the portfolio growth plot */
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 1024px) {
   body {
     padding: 20px;
   }

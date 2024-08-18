@@ -189,11 +189,7 @@ The `transaction_history.json` file contains a detailed record of all transactio
     "deposit": 5000.0,
     "interest": 10.5,
     "dividend": 100.0
-  },
-  "2023-05-16": {
-    // Similar structure for another date
   }
-  // ... more dates
 }
 ```
 
@@ -203,54 +199,59 @@ The `portfolio_history.json` file contains a detailed record of your portfolio's
 
 ```json
 {
-  "version": "1.0",
-  "timestamp": "2023-05-15T12:34:56.789012",
+  "timestamp": "2024-08-16T00:00:00.000000",
   "sectors": {
     "AAPL": "Technology",
-    "GOOGL": "Communication Services",
+    "TSLA": "Consumer Cyclical",
     "SPY": "ETF"
-    // ... other symbols and their sectors
   },
   "portfolios": {
-    "2023-05-15": {
+    "2024-08-16": {
       "summary": {
-        "total_market_value": "100000.00",
-        "cash": "5000.00",
-        "invested_value": "95000.00",
-        "total_cost_basis": "90000.00",
-        "unrealized_gain_loss": "5000.00",
-        "unrealized_gain_loss_percentage": "5.56",
-        "daily_gain": "500.00",
-        "daily_return": "0.0050",
-        "total_deposits": "95000.00"
+        "cash": 118.33,
+        "total_deposits": 39000.0,
+        "total_value": 48744.67202,
+        "total_market_value": 48626.34202,
+        "total_cost_basis": 40876.88142,
+        "total_unrealized_pnl": 7749.4606,
+        "total_unrealized_return": 0.189580524,
+        "total_realized_pnl": 1837.051419,
+        "total_realized_return": 0.04710388254,
+        "total_daily_change": 433.4006652,
+        "total_daily_return": 0.008971005173
       },
       "holdings": {
-        "AAPL": {
-          "quantity": "100.00",
-          "total_cost": "15000.00",
-          "unit_cost": "150.00",
-          "market_price": "160.00",
-          "market_value": "16000.00",
-          "unrealized_gain_loss": "1000.00",
-          "unrealized_gain_loss_percentage": "6.67",
-          "daily_gain": "200.00",
-          "daily_return": "0.0125"
+        "TSLA": {
+          "quantity": 70.0,
+          "cost_basis": 14095.42,
+          "average_cost": 201.3631429,
+          "market_price": 216.1199951171875,
+          "market_value": 15128.39966,
+          "unrealized_pnl": 1032.97966,
+          "unrealized_return": 0.07328477335,
+          "daily_change": 138.5997,
+          "daily_return": 0.009246267487
         }
-        // ... other holdings
       },
       "closed_positions": {
-        "GOOGL": [
-          {
-            "quantity": "10.00",
-            "sell_price": "2500.00",
-            "cost_basis": "2400.00",
-            "realized_gain": "1000.00"
-          }
-        ]
-        // ... other closed positions
+        "SONY": {
+          "close_date": "2023-10-24",
+          "quantity": 2.0,
+          "cost_basis": 165.8,
+          "realized_pnl": 1.93,
+          "realized_return": 0.01164053076
+        }
+      },
+      "partially_sold_positions": {
+        "TSLA": {
+          "last_sell_date": "2023-12-27",
+          "quantity": 5.0,
+          "cost_basis": 1078.73,
+          "realized_pnl": 221.25,
+          "realized_return": 0.2051022962
+        }
       }
     }
-    // ... portfolio data for other dates
   }
 }
 ```

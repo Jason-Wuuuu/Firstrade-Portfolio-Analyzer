@@ -8,10 +8,12 @@
 - [Setup](#setup)
 - [Usage](#usage)
 - [Visualizations and Example Output](#visualizations-and-example-output)
-  - [Portfolio Holdings](#portfolio-holdings)
-  - [Portfolio Summary](#portfolio-summary)
-  - [Closed Positions](#closed-positions)
-  - [Partially Sold Positions](#partially-sold-positions)
+  - [Sample Visualizations](#sample-visualizations)
+  - [Portfolio Analysis Tables](#portfolio-analysis-tables)
+    - [Portfolio Holdings](#portfolio-holdings)
+    - [Portfolio Summary](#portfolio-summary)
+    - [Closed Positions](#closed-positions)
+    - [Partially Sold Positions](#partially-sold-positions)
 - [Note](#note)
 - [Appendix: Output File Structures](#appendix-output-file-structures)
   - [transaction_history.json Structure](#transaction_historyjson-structure)
@@ -92,13 +94,12 @@ The scripts generate several output files:
 
 The notebook includes a range of interactive visualizations and tables, offering:
 
-- Visualization of stock holdings by market value
+- Portfolio composition and market value distribution
 - Sector allocation analysis
-- Comparative analysis of portfolio performance against the S&P 500 index
-- Interactive chart features for zooming, panning, and data point hover-over details
-- Direct comparison of portfolio performance to the S&P 500 benchmark
+- Performance comparison against the S&P 500 index
+- Interactive features: zooming, panning, and data point hover-over details
 - Customizable date ranges for in-depth analysis
-- Sector-wise breakdown with detailed information on individual stocks available on hover
+- Sector-wise breakdown with detailed stock information on hover
 
 ### Sample Visualizations:
 
@@ -108,6 +109,8 @@ The notebook includes a range of interactive visualizations and tables, offering
   <img src="./outputs/output2.png" style="width: 100%; height: auto;">
   <img src="./outputs/output3.png" style="width: 100%; height: auto;">
 </div>
+
+### Portfolio Analysis Tables
 
 #### Portfolio Holdings
 

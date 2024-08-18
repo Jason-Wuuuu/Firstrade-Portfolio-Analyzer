@@ -535,7 +535,7 @@ class PortfolioHistory:
         cash = state['summary']['cash']
         total_portfolio_value = total_holdings_value + cash
         unrealized_gain_loss = total_holdings_value - total_cost_basis
-        daily_roi = self._calculate_daily_roi(
+        daily_return = self._calculate_daily_return(
             total_portfolio_value, previous_state)
 
         # Calculate ROI
@@ -548,7 +548,7 @@ class PortfolioHistory:
             'cash': cash,
             'total_portfolio_value': total_portfolio_value,
             'unrealized_gain_loss': unrealized_gain_loss,
-            'daily_roi': daily_roi,
+            'daily_return': daily_return,
             'roi': roi
         }
 
@@ -571,7 +571,7 @@ class PortfolioHistory:
             unrealized_gain_loss = current_market_value - cost_basis
             daily_gain_loss = self._calculate_holding_daily_gain_loss(
                 symbol, current_market_value, quantity, previous_state)
-            daily_roi = self._calculate_holding_daily_roi(
+            daily_return = self._calculate_holding_daily_return(
                 symbol, current_market_value, previous_state)
 
             # Calculate percentage of the unrealized gain
@@ -587,7 +587,7 @@ class PortfolioHistory:
                 'unrealized_gain_loss': unrealized_gain_loss,
                 'unrealized_gain_loss_percent': unrealized_gain_loss_percent,
                 'daily_gain_loss': daily_gain_loss,
-                'daily_roi': daily_roi
+                'daily_return': daily_return
             }
         except KeyError:
             logging.warning(f"No market data available for {
@@ -613,9 +613,9 @@ class PortfolioHistory:
             return current_market_value - previous_market_value
         return Decimal('0')
 
-    def _calculate_holding_daily_roi(self, symbol: str, current_market_value: Decimal, previous_state: Dict[str, Any]) -> Decimal:
+    def _calculate_holding_daily_return(self, symbol: str, current_market_value: Decimal, previous_state: Dict[str, Any]) -> Decimal:
         """
-        Calculate the daily ROI for a single holding.
+        Calculate the daily return for a single holding.
 
         Args:
             symbol (str): The symbol of the holding.
@@ -623,7 +623,7 @@ class PortfolioHistory:
             previous_state (Dict[str, Any]): The previous portfolio state.
 
         Returns:
-            Decimal: The daily ROI for the holding.
+            Decimal: The daily return for the holding.
         """
         if previous_state and symbol in previous_state['holdings']:
             previous_market_value = Decimal(
@@ -642,9 +642,9 @@ class PortfolioHistory:
             return current_total_value - previous_total_value
         return Decimal('0')
 
-    def _calculate_daily_roi(self, current_total_value: Decimal, previous_state: Dict[str, Any]) -> Decimal:
+    def _calculate_daily_return(self, current_total_value: Decimal, previous_state: Dict[str, Any]) -> Decimal:
         """
-        Calculate the daily ROI for the entire portfolio, handling cases where previous value might be zero or NaN.
+        Calculate the daily return for the entire portfolio, handling cases where previous value might be zero or NaN.
         """
         if previous_state:
             previous_total_value = Decimal(
@@ -653,15 +653,15 @@ class PortfolioHistory:
                 return (current_total_value - previous_total_value) / previous_total_value
         return Decimal('0')
 
-    def _calculate_total_roi(self, total_portfolio_value: Decimal, total_deposits: Decimal) -> Decimal:
+    def _calculate_total_return(self, total_portfolio_value: Decimal, total_deposits: Decimal) -> Decimal:
         """
-        Calculate the total ROI of the portfolio.
+        Calculate the total return of the portfolio.
         """
         return (total_portfolio_value - total_deposits) / total_deposits if total_deposits != 0 else Decimal('0')
 
-    def _calculate_cumulative_roi(self, total_portfolio_value: Decimal, total_cost_basis: Decimal) -> Decimal:
+    def _calculate_cumulative_return(self, total_portfolio_value: Decimal, total_cost_basis: Decimal) -> Decimal:
         """
-        Calculate the cumulative ROI of the portfolio based on cost basis.
+        Calculate the cumulative return of the portfolio based on cost basis.
         This includes both unrealized gains and any cash/dividends.
         """
         return (total_portfolio_value - total_cost_basis) / total_cost_basis if total_cost_basis != 0 else Decimal('0')
@@ -725,15 +725,15 @@ class PortfolioHistory:
             else:
                 holding['daily_gain_loss'] = Decimal('0')
 
-            # Calculate daily ROI for the holding
+            # Calculate daily return for the holding
             if previous_state and symbol in previous_state['holdings']:
                 previous_market_value = Decimal(
                     str(previous_state['holdings'][symbol]['market_value']))
-                holding['daily_roi'] = (market_value - previous_market_value) / \
+                holding['daily_return'] = (market_value - previous_market_value) / \
                     previous_market_value if previous_market_value != 0 else Decimal(
                         '0')
             else:
-                holding['daily_roi'] = Decimal('0')
+                holding['daily_return'] = Decimal('0')
 
         # Add change in cash position to total_daily_gain_loss
         if previous_state:
@@ -747,16 +747,16 @@ class PortfolioHistory:
         portfolio_unrealized_gain_loss_percent = (
             unrealized_gain_loss / total_cost_basis) if total_cost_basis != 0 else Decimal('0')
 
-        # Calculate daily ROI for the entire portfolio
-        daily_roi = self._calculate_daily_roi(
+        # Calculate daily return for the entire portfolio
+        daily_return = self._calculate_daily_return(
             total_portfolio_value, previous_state)
 
-        # Calculate total ROI (based on deposits)
-        total_roi = self._calculate_total_roi(
+        # Calculate total return (based on deposits)
+        total_return = self._calculate_total_return(
             total_portfolio_value, total_deposits)
 
-        # Calculate cumulative ROI (includes unrealized gains and cash/dividends)
-        cumulative_roi = self._calculate_cumulative_roi(
+        # Calculate cumulative return (includes unrealized gains and cash/dividends)
+        cumulative_return = self._calculate_cumulative_return(
             total_portfolio_value, total_cost_basis)
 
         # Calculate ROI
@@ -778,10 +778,10 @@ class PortfolioHistory:
                 'unrealized_gain_loss': unrealized_gain_loss,
                 'unrealized_gain_loss_percent': portfolio_unrealized_gain_loss_percent,
                 'daily_gain_loss': total_daily_gain_loss,
-                'daily_roi': daily_roi,
+                'daily_return': daily_return,
                 'total_deposits': total_deposits,
-                'total_roi': total_roi,
-                'cumulative_roi': cumulative_roi,
+                'total_return': total_return,
+                'cumulative_return': cumulative_return,
                 'roi': roi,
                 'number_of_holdings': len(valid_holdings),
                 'sector_allocation': sector_allocation,
@@ -804,7 +804,7 @@ class PortfolioHistory:
             'market_value': None,
             'unrealized_gain_loss': None,
             'daily_gain_loss': Decimal('0'),
-            'daily_roi': Decimal('0')
+            'daily_return': Decimal('0')
         })
 
     def get_portfolio_on_date(self, date: str) -> Dict[str, Any]:

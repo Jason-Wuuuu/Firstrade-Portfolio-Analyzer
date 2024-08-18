@@ -1,3 +1,4 @@
+import copy
 import json
 import datetime
 import math
@@ -363,8 +364,8 @@ class PortfolioHistory:
                 'total_daily_return': Decimal('0'),  # Will be updated later
             },
             'holdings': current_holdings,
-            'closed_positions': closed_positions,
-            'partially_sold_positions': partially_sold_positions
+            'closed_positions': copy.deepcopy(closed_positions),
+            'partially_sold_positions': copy.deepcopy(partially_sold_positions)
         }
 
     def fill_missing_dates(self):

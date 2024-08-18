@@ -28,6 +28,9 @@ portfolio_history.json
 # But don't ignore the templates directory
 !/reports/templates/
 
+# Don't ignore the specific portfolio report
+!/reports/portfolio_report_2023-12-19.html
+
 # Ignore other common files
 *.swp
 *.swo

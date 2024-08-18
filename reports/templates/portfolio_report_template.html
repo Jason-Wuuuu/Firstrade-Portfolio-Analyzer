@@ -11,11 +11,13 @@
   </head>
   <body>
     <div class="container">
-      <h1>Portfolio Analysis Report - {date}</h1>
+      <h1>Portfolio Analysis Report {date}</h1>
 
       <div id="portfolio-growth" class="plot section">
         <h2>Portfolio Growth</h2>
-        {portfolio_growth_plot}
+        <div class="plot-scroll-container wide-plot">
+          {portfolio_growth_plot}
+        </div>
       </div>
 
       <div id="portfolio-analysis" class="section">
@@ -61,35 +63,43 @@
       <div id="position-analysis" class="section">
         <h2>Position Analysis</h2>
         <div class="plot-container">
-          <div id="stock-proportions" class="plot-half">
+          <div id="stock-proportions" class="plot-item">
             <h3>Stock Proportions</h3>
-            {stock_proportions_plot}
+            <div class="plot-scroll-container">{stock_proportions_plot}</div>
           </div>
-          <div id="sector-proportions" class="plot-half">
+          <div id="sector-proportions" class="plot-item">
             <h3>Sector Proportions</h3>
-            {sector_proportions_plot}
+            <div class="plot-scroll-container">{sector_proportions_plot}</div>
           </div>
         </div>
-        <div id="stock-proportion-over-time" class="plot-full">
+        <div id="stock-proportion-over-time" class="plot-item">
           <h3>Asset Allocation Over Time</h3>
-          {asset_allocation_over_time_plot}
+          <div class="plot-scroll-container">
+            {asset_allocation_over_time_plot}
+          </div>
         </div>
       </div>
 
       <div id="current-portfolio" class="section">
         <h2>Holdings</h2>
-        <div id="portfolio-table">{portfolio_table}</div>
+        <div class="table-wrapper">
+          <div id="portfolio-table">{portfolio_table}</div>
+        </div>
       </div>
 
       <div id="closed-positions" class="section">
         <h2>Closed Positions</h2>
-        <div id="closed-positions-table">{closed_positions_table}</div>
+        <div class="table-wrapper">
+          <div id="closed-positions-table">{closed_positions_table}</div>
+        </div>
       </div>
 
       <div id="partially-sold-positions" class="section">
         <h2>Partially Sold Positions</h2>
-        <div id="partially-sold-positions-table">
-          {partially_sold_positions_table}
+        <div class="table-wrapper">
+          <div id="partially-sold-positions-table">
+            {partially_sold_positions_table}
+          </div>
         </div>
       </div>
     </div>

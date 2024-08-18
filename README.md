@@ -103,8 +103,11 @@ These are compiled into an HTML report for easy viewing of portfolio performance
 
 To view an example HTML report:
 
-1. Check the `reports/` directory for files named `portfolio_report_YYYY-MM-DD.html`
-2. Open [this example report](reports/portfolio_report_2023-12-19.html) in your web browser
+1. **Local file:**
+   Open [this example report](reports/portfolio_report_2023-12-19.html) in your web browser
+2. **Online demo:**
+   [link](https://jason-wuuuu.github.io/Jason/projects)
+   (Click the "demo" button on the `Firstrade Portfolio Analysis` project card)
 
 ### Sample Visualizations:
 

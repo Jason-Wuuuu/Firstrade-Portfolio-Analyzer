@@ -27,12 +27,12 @@
               <th>Value</th>
             </tr>
             <tr>
-              <td>Total Portfolio Value</td>
-              <td>{total_portfolio_value}</td>
+              <td>Total Value</td>
+              <td>{total_value}</td>
             </tr>
             <tr>
-              <td>Total Holdings Value</td>
-              <td>{total_holdings_value}</td>
+              <td>Total Market Value</td>
+              <td>{total_market_value}</td>
             </tr>
             <tr>
               <td>Cash</td>
@@ -43,28 +43,16 @@
               <td>{total_deposits}</td>
             </tr>
             <tr>
-              <td>Unrealized Gain/Loss</td>
-              <td>{unrealized_gain_loss}</td>
+              <td>Unrealized P/L</td>
+              <td>{unrealized_pnl}</td>
             </tr>
             <tr>
-              <td>Realized Gain/Loss</td>
-              <td>{total_realized_gain_loss}</td>
+              <td>Realized P/L</td>
+              <td>{total_realized_pnl}</td>
             </tr>
             <tr>
-              <td>Daily Gain/Loss</td>
-              <td>{daily_gain_loss}</td>
-            </tr>
-            <tr>
-              <td>Total Return</td>
-              <td>{total_return}</td>
-            </tr>
-            <tr>
-              <td>Cumulative Return</td>
-              <td>{cumulative_return}</td>
-            </tr>
-            <tr>
-              <td>ROI</td>
-              <td>{roi}</td>
+              <td>Daily Change</td>
+              <td>{daily_change}</td>
             </tr>
           </table>
         </div>
@@ -89,7 +77,7 @@
       </div>
 
       <div id="current-portfolio" class="section">
-        <h2>Current Portfolio</h2>
+        <h2>Holdings</h2>
         <div id="portfolio-table">{portfolio_table}</div>
       </div>
 

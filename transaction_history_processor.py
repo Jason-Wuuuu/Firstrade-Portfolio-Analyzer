@@ -91,6 +91,8 @@ class PortfolioHistory:
         self.sectors: Dict[str, str] = {}
         self.split_adjusted_prices: Dict[str,
                                          Dict[datetime.datetime, Decimal]] = {}
+        self.closed_positions: Dict[str, Dict[str, Any]] = {}
+        self.partially_sold_positions: Dict[str, Dict[str, Any]] = {}
 
     def process_transaction_history(self, input_file: str = 'transaction_history.json',
                                     save_output: bool = False,
@@ -162,6 +164,8 @@ class PortfolioHistory:
         holdings: Dict[str, Holding] = defaultdict(
             lambda: Holding(Decimal('0'), Decimal('0')))
         cumulative_deposits = Decimal('0')
+        closed_positions = {}
+        partially_sold_positions = defaultdict(dict)
 
         for date, transactions in self.transaction_history.items():
             cash = self._update_cash(cash, transactions)
@@ -169,14 +173,14 @@ class PortfolioHistory:
             cash, holdings = self._process_buys(
                 cash, holdings, transactions['buy'])
             cash, holdings = self._process_sells(
-                cash, holdings, transactions['sell'])
+                cash, holdings, transactions['sell'], date, closed_positions, partially_sold_positions)
             holdings = self._process_reinvestments(
                 holdings, transactions['reinvestment'])
 
             cumulative_deposits += Decimal(str(transactions['deposit']))
 
             portfolio_state[date] = self._create_portfolio_state(
-                cash, holdings, cumulative_deposits)
+                cash, holdings, cumulative_deposits, closed_positions.copy(), partially_sold_positions.copy())
 
         self.portfolio_state = portfolio_state
 
@@ -231,8 +235,8 @@ class PortfolioHistory:
                 cash -= cost
         return cash, holdings
 
-    def _process_sells(self, cash: Decimal, holdings: Dict[str, Holding],
-                       sells: Dict[str, List[Dict[str, Any]]]) -> tuple:
+    def _process_sells(self, cash: Decimal, holdings: Dict[str, Holding], sells: Dict[str, List[Dict[str, Any]]],
+                       date: str, closed_positions: Dict[str, Any], partially_sold_positions: Dict[str, Any]) -> tuple:
         """
         Process sell transactions and update cash, holdings, and realized gains.
 
@@ -240,6 +244,9 @@ class PortfolioHistory:
             cash (Decimal): Current cash balance.
             holdings (Dict[str, Holding]): Current holdings.
             sells (Dict[str, List[Dict[str, Any]]]): Sell transaction data.
+            date (str): The date of the transactions.
+            closed_positions (Dict[str, Any]): Dictionary to store closed positions.
+            partially_sold_positions (Dict[str, Any]): Dictionary to store partially sold positions.
 
         Returns:
             tuple: Updated cash balance, holdings, and realized gains.
@@ -253,15 +260,47 @@ class PortfolioHistory:
                     avg_cost_per_share = holdings[symbol].cost_basis / \
                         holdings[symbol].quantity
                     cost_basis_sold = avg_cost_per_share * sell_quantity
+                    profit_loss = sell_amount - cost_basis_sold
 
                     holdings[symbol].quantity -= sell_quantity
                     holdings[symbol].cost_basis -= cost_basis_sold
                     cash += sell_amount
-                else:
-                    # Handle error: trying to sell more shares than owned
-                    logging.error(f"Attempted to sell {sell_quantity} shares of {
-                                  symbol}, but only {holdings[symbol].quantity} owned.")
 
+                    if holdings[symbol].quantity < Decimal('0.00001'):
+                        if symbol in partially_sold_positions:
+                            closed_positions[symbol] = {
+                                "close_date": date,
+                                "quantity": float(partially_sold_positions[symbol]["quantity"] + sell_quantity),
+                                "cost_basis": float(partially_sold_positions[symbol]["cost_basis"] + cost_basis_sold),
+                                "realized_pnl": float(partially_sold_positions[symbol]["realized_pnl"] + profit_loss),
+                                "realized_return": float((partially_sold_positions[symbol]["realized_pnl"] + profit_loss) / (partially_sold_positions[symbol]["cost_basis"] + cost_basis_sold))
+                            }
+                            del partially_sold_positions[symbol]
+                        else:
+                            closed_positions[symbol] = {
+                                "close_date": date,
+                                "quantity": float(sell_quantity),
+                                "cost_basis": float(cost_basis_sold),
+                                "realized_pnl": float(profit_loss),
+                                "realized_return": float(profit_loss / cost_basis_sold)
+                            }
+                        del holdings[symbol]
+                    else:
+                        if symbol in partially_sold_positions:
+                            partially_sold_positions[symbol]["quantity"] += sell_quantity
+                            partially_sold_positions[symbol]["cost_basis"] += cost_basis_sold
+                            partially_sold_positions[symbol]["realized_pnl"] += profit_loss
+                            partially_sold_positions[symbol]["realized_return"] = (
+                                partially_sold_positions[symbol]["realized_pnl"] / partially_sold_positions[symbol]["cost_basis"])
+                            partially_sold_positions[symbol]["last_sell_date"] = date
+                        else:
+                            partially_sold_positions[symbol] = {
+                                "last_sell_date": date,
+                                "quantity": sell_quantity,
+                                "cost_basis": cost_basis_sold,
+                                "realized_pnl": profit_loss,
+                                "realized_return": (profit_loss / cost_basis_sold)
+                            }
         return cash, holdings
 
     def _process_reinvestments(self, holdings: Dict[str, Holding], reinvestments: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Holding]:
@@ -284,7 +323,8 @@ class PortfolioHistory:
         return holdings
 
     def _create_portfolio_state(self, cash: Decimal, holdings: Dict[str, Holding],
-                                cumulative_deposits: Decimal) -> Dict[str, Any]:
+                                cumulative_deposits: Decimal, closed_positions: Dict[str, Any],
+                                partially_sold_positions: Dict[str, Any]) -> Dict[str, Any]:
         """
         Create a portfolio state snapshot for a given point in time.
 
@@ -292,6 +332,8 @@ class PortfolioHistory:
             cash (Decimal): Current cash balance.
             holdings (Dict[str, Holding]): Current holdings.
             cumulative_deposits (Decimal): Total deposits made.
+            closed_positions (Dict[str, Any]): Dictionary of closed positions.
+            partially_sold_positions (Dict[str, Any]): Dictionary of partially sold positions.
 
         Returns:
             Dict[str, Any]: A snapshot of the portfolio state.
@@ -300,7 +342,7 @@ class PortfolioHistory:
             symbol: {
                 'quantity': data.quantity,
                 'cost_basis': data.cost_basis,
-                'unit_cost': data.cost_basis / data.quantity if data.quantity > 0 else 0
+                'average_cost': data.cost_basis / data.quantity if data.quantity > 0 else 0
             }
             for symbol, data in holdings.items() if data.quantity > 0
         }
@@ -309,8 +351,20 @@ class PortfolioHistory:
             'summary': {
                 'cash': cash,
                 'total_deposits': cumulative_deposits,
+                'total_value': Decimal('0'),  # Will be updated later
+                'total_market_value': Decimal('0'),  # Will be updated later
+                'total_cost_basis': Decimal('0'),  # Will be updated later
+                'total_unrealized_pnl': Decimal('0'),  # Will be updated later
+                # Will be updated later
+                'total_unrealized_return': Decimal('0'),
+                'total_realized_pnl': Decimal('0'),  # Will be updated later
+                'total_realized_return': Decimal('0'),  # Will be updated later
+                'total_daily_change': Decimal('0'),  # Will be updated later
+                'total_daily_return': Decimal('0'),  # Will be updated later
             },
-            'holdings': current_holdings
+            'holdings': current_holdings,
+            'closed_positions': closed_positions,
+            'partially_sold_positions': partially_sold_positions
         }
 
     def fill_missing_dates(self):
@@ -353,15 +407,27 @@ class PortfolioHistory:
             'summary': {
                 'cash': last_state['summary']['cash'],
                 'total_deposits': last_state['summary']['total_deposits'],
+                'total_value': Decimal('0'),  # Will be updated later
+                'total_market_value': Decimal('0'),  # Will be updated later
+                'total_cost_basis': Decimal('0'),  # Will be updated later
+                'total_unrealized_pnl': Decimal('0'),  # Will be updated later
+                # Will be updated later
+                'total_unrealized_return': Decimal('0'),
+                'total_realized_pnl': Decimal('0'),  # Will be updated later
+                'total_realized_return': Decimal('0'),  # Will be updated later
+                'total_daily_change': Decimal('0'),  # Will be updated later
+                'total_daily_return': Decimal('0'),  # Will be updated later
             },
             'holdings': {
                 symbol: {
                     'quantity': data['quantity'],
                     'cost_basis': data['cost_basis'],
-                    'unit_cost': data['unit_cost']
+                    'average_cost': data['average_cost']
                 }
                 for symbol, data in last_state['holdings'].items()
-            }
+            },
+            'closed_positions': last_state['closed_positions'].copy(),
+            'partially_sold_positions': last_state['partially_sold_positions'].copy()
         }
 
     def fetch_historical_data(self):
@@ -515,48 +581,50 @@ class PortfolioHistory:
         """
         Calculate various portfolio metrics for a given state and date.
         """
-        total_holdings_value = Decimal('0')
+        total_market_value = Decimal('0')
         total_cost_basis = Decimal('0')
-        daily_gain_loss = Decimal('0')
+        daily_change = Decimal('0')
 
         for symbol, holding in state['holdings'].items():
             holding_metrics = self._calculate_holding_metrics(
                 symbol, holding, date_obj, previous_state)
 
             if holding_metrics:
-                total_holdings_value += holding_metrics['market_value']
+                total_market_value += holding_metrics['market_value']
                 total_cost_basis += holding_metrics['cost_basis']
-                daily_gain_loss += holding_metrics['daily_gain_loss']
+                daily_change += holding_metrics['daily_change']
 
                 self._update_holding_metrics(holding, holding_metrics)
             else:
                 self._update_holding_without_market_data(holding)
 
         cash = state['summary']['cash']
-        total_portfolio_value = total_holdings_value + cash
-        unrealized_gain_loss = total_holdings_value - total_cost_basis
+        total_value = total_market_value + cash
+        unrealized_pnl = total_market_value - total_cost_basis
         daily_return = self._calculate_daily_return(
-            total_portfolio_value, previous_state)
+            total_value, previous_state)
 
-        # Calculate ROI
-        roi = self._calculate_roi(total_holdings_value, total_cost_basis)
+        # Calculate cumulative return
+        cumulative_return = self._calculate_cumulative_return(
+            total_value, total_cost_basis)
 
         return {
-            'total_holdings_value': total_holdings_value,
+            'total_market_value': total_market_value,
             'total_cost_basis': total_cost_basis,
-            'daily_gain_loss': daily_gain_loss,
+            'daily_change': daily_change,
             'cash': cash,
-            'total_portfolio_value': total_portfolio_value,
-            'unrealized_gain_loss': unrealized_gain_loss,
+            'total_value': total_value,
+            'unrealized_pnl': unrealized_pnl,
             'daily_return': daily_return,
-            'roi': roi
+            'cumulative_return': cumulative_return
         }
 
-    def _calculate_roi(self, total_holdings_value: Decimal, total_cost_basis: Decimal) -> Decimal:
+    def _calculate_cumulative_return(self, total_value: Decimal, total_cost_basis: Decimal) -> Decimal:
         """
-        Calculate the Return on Investment (ROI).
+        Calculate the cumulative return of the portfolio based on cost basis.
+        This includes both unrealized gains and any cash/dividends.
         """
-        return (total_holdings_value - total_cost_basis) / total_cost_basis if total_cost_basis != 0 else Decimal('0')
+        return (total_value - total_cost_basis) / total_cost_basis if total_cost_basis != 0 else Decimal('0')
 
     def _calculate_holding_metrics(self, symbol: str, holding: Dict[str, Any], date_obj: datetime.datetime, previous_state: Dict[str, Any]) -> Dict[str, Decimal]:
         """
@@ -568,25 +636,25 @@ class PortfolioHistory:
             cost_basis = holding['cost_basis']
 
             current_market_value = market_price * quantity
-            unrealized_gain_loss = current_market_value - cost_basis
-            daily_gain_loss = self._calculate_holding_daily_gain_loss(
+            unrealized_pnl = current_market_value - cost_basis
+            daily_change = self._calculate_holding_daily_change(
                 symbol, current_market_value, quantity, previous_state)
             daily_return = self._calculate_holding_daily_return(
                 symbol, current_market_value, previous_state)
 
             # Calculate percentage of the unrealized gain
-            unrealized_gain_loss_percent = (
-                unrealized_gain_loss / cost_basis) if cost_basis != 0 else Decimal('0')
+            unrealized_return = (
+                unrealized_pnl / cost_basis) if cost_basis != 0 else Decimal('0')
 
             return {
                 'quantity': quantity,
                 'cost_basis': cost_basis,
-                'unit_cost': cost_basis / quantity if quantity > 0 else Decimal('0'),
+                'average_cost': cost_basis / quantity if quantity > 0 else Decimal('0'),
                 'market_price': market_price,
                 'market_value': current_market_value,
-                'unrealized_gain_loss': unrealized_gain_loss,
-                'unrealized_gain_loss_percent': unrealized_gain_loss_percent,
-                'daily_gain_loss': daily_gain_loss,
+                'unrealized_pnl': unrealized_pnl,
+                'unrealized_return': unrealized_return,
+                'daily_change': daily_change,
                 'daily_return': daily_return
             }
         except KeyError:
@@ -594,9 +662,9 @@ class PortfolioHistory:
                             symbol} on {date_obj}")
             return None
 
-    def _calculate_holding_daily_gain_loss(self, symbol: str, current_market_value: Decimal, quantity: Decimal, previous_state: Dict[str, Any]) -> Decimal:
+    def _calculate_holding_daily_change(self, symbol: str, current_market_value: Decimal, quantity: Decimal, previous_state: Dict[str, Any]) -> Decimal:
         """
-        Calculate the daily gain/loss for a single holding.
+        Calculate the daily change for a single holding.
 
         Args:
             symbol (str): The symbol of the holding.
@@ -605,7 +673,7 @@ class PortfolioHistory:
             previous_state (Dict[str, Any]): The previous portfolio state.
 
         Returns:
-            Decimal: The daily gain/loss for the holding.
+            Decimal: The daily change for the holding.
         """
         if previous_state and symbol in previous_state['holdings']:
             previous_market_value = Decimal(
@@ -632,161 +700,80 @@ class PortfolioHistory:
                 return (current_market_value - previous_market_value) / previous_market_value
         return Decimal('0')
 
-    def _calculate_daily_gain_loss(self, current_total_value: Decimal, previous_state: Dict[str, Any]) -> Decimal:
-        """
-        Calculate the daily gain/loss for the entire portfolio, handling cases where previous value might not exist.
-        """
-        if previous_state:
-            previous_total_value = Decimal(str(previous_state['summary'].get(
-                'total_portfolio_value', current_total_value)))
-            return current_total_value - previous_total_value
-        return Decimal('0')
-
     def _calculate_daily_return(self, current_total_value: Decimal, previous_state: Dict[str, Any]) -> Decimal:
         """
         Calculate the daily return for the entire portfolio, handling cases where previous value might be zero or NaN.
         """
         if previous_state:
-            previous_total_value = Decimal(
-                str(previous_state['summary'].get('total_portfolio_value', 0)))
+            previous_total_value = Decimal(str(previous_state['summary'].get(
+                'total_value', current_total_value)))
             if previous_total_value and previous_total_value != 0:
                 return (current_total_value - previous_total_value) / previous_total_value
         return Decimal('0')
 
-    def _calculate_total_return(self, total_portfolio_value: Decimal, total_deposits: Decimal) -> Decimal:
-        """
-        Calculate the total return of the portfolio.
-        """
-        return (total_portfolio_value - total_deposits) / total_deposits if total_deposits != 0 else Decimal('0')
-
-    def _calculate_cumulative_return(self, total_portfolio_value: Decimal, total_cost_basis: Decimal) -> Decimal:
-        """
-        Calculate the cumulative return of the portfolio based on cost basis.
-        This includes both unrealized gains and any cash/dividends.
-        """
-        return (total_portfolio_value - total_cost_basis) / total_cost_basis if total_cost_basis != 0 else Decimal('0')
-
-    def _calculate_asset_allocation(self, holdings: Dict[str, Any], total_portfolio_value: Decimal) -> None:
-        """
-        Calculate the asset allocation as percentages of the total portfolio value and add to each holding.
-        Allocation is based on market value.
-        """
-        for symbol, holding in holdings.items():
-            holding['allocation'] = (
-                holding['market_value'] / total_portfolio_value) if total_portfolio_value != 0 else Decimal('0')
-
-    def _calculate_sector_allocation(self, holdings: Dict[str, Any]) -> Dict[str, Decimal]:
-        """
-        Calculate the sector allocation of the portfolio based on market value.
-        """
-        sector_allocation = defaultdict(Decimal)
-        for symbol, holding in holdings.items():
-            sector = self.sectors.get(symbol, 'Unknown')
-            sector_allocation[sector] += holding['market_value']
-        total_value = sum(sector_allocation.values())
-        return {sector: (value / total_value) if total_value != 0 else Decimal('0') for sector, value in sector_allocation.items()}
-
     def _update_state_metrics(self, state: Dict[str, Any], portfolio_metrics: Dict[str, Decimal], previous_state: Dict[str, Any]):
         """
-        Update the portfolio state with calculated metrics, including daily gain/loss for each holding.
+        Update the portfolio state with calculated metrics, excluding NaN values.
         """
-        total_deposits = state['summary']['total_deposits']
-        cash = portfolio_metrics['cash']
-
-        # Filter out holdings with NaN values
-        valid_holdings = {symbol: holding for symbol, holding in state['holdings'].items()
-                          if holding['market_value'] is not None and not math.isnan(float(holding['market_value']))}
-
-        # Calculate metrics for each holding and update total values
-        total_holdings_value = Decimal('0')
+        total_market_value = Decimal('0')
         total_cost_basis = Decimal('0')
-        total_daily_gain_loss = Decimal('0')
+        total_daily_change = Decimal('0')
+        total_realized_pnl = Decimal('0')
 
-        for symbol, holding in valid_holdings.items():
-            # Update individual holding metrics
-            market_value = Decimal(str(holding['market_value']))
+        for symbol, holding in state['holdings'].items():
+            market_value = Decimal(str(holding.get('market_value', '0')))
             cost_basis = Decimal(str(holding['cost_basis']))
 
-            total_holdings_value += market_value
+            # Skip this holding if market_value is None or NaN
+            if market_value is None or math.isnan(float(market_value)):
+                continue
+
+            total_market_value += market_value
             total_cost_basis += cost_basis
 
-            # Calculate unrealized gain/loss for the holding
-            holding['unrealized_gain_loss'] = market_value - cost_basis
-            holding['unrealized_gain_loss_percent'] = (
-                holding['unrealized_gain_loss'] / cost_basis) if cost_basis != 0 else Decimal('0')
+            holding['unrealized_pnl'] = market_value - cost_basis
+            holding['unrealized_return'] = (
+                market_value - cost_basis) / cost_basis if cost_basis != 0 else Decimal('0')
 
-            # Calculate daily gain/loss for the holding
             if previous_state and symbol in previous_state['holdings']:
                 previous_market_value = Decimal(
-                    str(previous_state['holdings'][symbol]['market_value']))
-                holding['daily_gain_loss'] = market_value - \
-                    previous_market_value
-                total_daily_gain_loss += holding['daily_gain_loss']
+                    str(previous_state['holdings'][symbol].get('market_value', '0')))
+                if previous_market_value is not None and not math.isnan(float(previous_market_value)):
+                    holding['daily_change'] = market_value - \
+                        previous_market_value
+                    holding['daily_return'] = (market_value - previous_market_value) / \
+                        previous_market_value if previous_market_value != 0 else Decimal(
+                            '0')
+                    total_daily_change += holding['daily_change']
+                else:
+                    holding['daily_change'] = Decimal('0')
+                    holding['daily_return'] = Decimal('0')
             else:
-                holding['daily_gain_loss'] = Decimal('0')
-
-            # Calculate daily return for the holding
-            if previous_state and symbol in previous_state['holdings']:
-                previous_market_value = Decimal(
-                    str(previous_state['holdings'][symbol]['market_value']))
-                holding['daily_return'] = (market_value - previous_market_value) / \
-                    previous_market_value if previous_market_value != 0 else Decimal(
-                        '0')
-            else:
+                holding['daily_change'] = Decimal('0')
                 holding['daily_return'] = Decimal('0')
 
-        # Add change in cash position to total_daily_gain_loss
-        if previous_state:
-            cash_change = cash - \
-                Decimal(str(previous_state['summary']['cash']))
-            total_daily_gain_loss += cash_change
+        # Calculate total realized PnL from closed and partially sold positions
+        for positions in [state['closed_positions'], state['partially_sold_positions']]:
+            for position in positions.values():
+                total_realized_pnl += Decimal(str(position['realized_pnl']))
 
-        # Calculate overall portfolio metrics
-        total_portfolio_value = total_holdings_value + cash
-        unrealized_gain_loss = total_holdings_value - total_cost_basis
-        portfolio_unrealized_gain_loss_percent = (
-            unrealized_gain_loss / total_cost_basis) if total_cost_basis != 0 else Decimal('0')
+        cash = portfolio_metrics['cash']
+        total_value = total_market_value + cash
+        total_unrealized_pnl = total_market_value - total_cost_basis
+        total_deposits = state['summary']['total_deposits']
 
-        # Calculate daily return for the entire portfolio
-        daily_return = self._calculate_daily_return(
-            total_portfolio_value, previous_state)
-
-        # Calculate total return (based on deposits)
-        total_return = self._calculate_total_return(
-            total_portfolio_value, total_deposits)
-
-        # Calculate cumulative return (includes unrealized gains and cash/dividends)
-        cumulative_return = self._calculate_cumulative_return(
-            total_portfolio_value, total_cost_basis)
-
-        # Calculate ROI
-        roi = self._calculate_roi(total_holdings_value, total_cost_basis)
-
-        # Calculate asset allocation
-        self._calculate_asset_allocation(valid_holdings, total_portfolio_value)
-
-        # Calculate sector allocation
-        sector_allocation = self._calculate_sector_allocation(valid_holdings)
-
-        # Update the state with all calculated metrics
-        state.update({
-            'summary': {
-                'total_holdings_value': total_holdings_value,
-                'total_portfolio_value': total_portfolio_value,
-                'cash': cash,
-                'total_cost_basis': total_cost_basis,
-                'unrealized_gain_loss': unrealized_gain_loss,
-                'unrealized_gain_loss_percent': portfolio_unrealized_gain_loss_percent,
-                'daily_gain_loss': total_daily_gain_loss,
-                'daily_return': daily_return,
-                'total_deposits': total_deposits,
-                'total_return': total_return,
-                'cumulative_return': cumulative_return,
-                'roi': roi,
-                'number_of_holdings': len(valid_holdings),
-                'sector_allocation': sector_allocation,
-            },
-            'holdings': valid_holdings
+        # Update summary
+        state['summary'].update({
+            'total_market_value': total_market_value,
+            'total_value': total_value,
+            'cash': cash,
+            'total_cost_basis': total_cost_basis,
+            'total_unrealized_pnl': total_unrealized_pnl,
+            'total_unrealized_return': total_unrealized_pnl / total_cost_basis if total_cost_basis != 0 else Decimal('0'),
+            'total_realized_pnl': total_realized_pnl,
+            'total_realized_return': total_realized_pnl / total_deposits if total_deposits != 0 else Decimal('0'),
+            'total_daily_change': total_daily_change,
+            'total_daily_return': total_daily_change / (total_value - total_daily_change) if (total_value - total_daily_change) != 0 else Decimal('0'),
         })
 
     def _update_holding_metrics(self, holding: Dict[str, Any], metrics: Dict[str, Decimal]):
@@ -802,8 +789,8 @@ class PortfolioHistory:
         holding.update({
             'market_price': None,
             'market_value': None,
-            'unrealized_gain_loss': None,
-            'daily_gain_loss': Decimal('0'),
+            'unrealized_pnl': None,
+            'daily_change': Decimal('0'),
             'daily_return': Decimal('0')
         })
 

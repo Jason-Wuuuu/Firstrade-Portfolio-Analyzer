@@ -153,42 +153,42 @@ The `transaction_history.json` file contains a detailed record of all transactio
 
 ```json
 {
-  "2023-05-15": {
+  "2023-06-20": {
     "buy": {
-      "AAPL": [
+      "MSFT": [
         {
-          "quantity": 10,
-          "price": 150.0,
-          "amount": 1500.0
+          "quantity": 5,
+          "price": 320.0,
+          "amount": 1600.0
         }
       ]
     },
     "sell": {
-      "GOOGL": [
+      "AMZN": [
         {
-          "quantity": 5,
-          "price": 2500.0,
-          "amount": 12500.0
+          "quantity": 2,
+          "price": 130.0,
+          "amount": 260.0
         }
       ]
     },
     "reinvestment": {
-      "SPY": [
+      "VTI": [
         {
-          "quantity": 1.5,
-          "price": 400.0,
-          "amount": 600.0
+          "quantity": 0.5,
+          "price": 220.0,
+          "amount": 110.0
         }
       ]
     },
     "split": {
-      "TSLA": {
-        "quantity": 2
+      "NVDA": {
+        "quantity": 4
       }
     },
-    "deposit": 5000.0,
-    "interest": 10.5,
-    "dividend": 100.0
+    "deposit": 2000.0,
+    "interest": 5.25,
+    "dividend": 75.0
   }
 }
 ```
@@ -199,56 +199,56 @@ The `portfolio_history.json` file contains a detailed record of your portfolio's
 
 ```json
 {
-  "timestamp": "2024-08-16T00:00:00.000000",
+  "timestamp": "2024-03-15T00:00:00.000000",
   "sectors": {
-    "AAPL": "Technology",
-    "TSLA": "Consumer Cyclical",
-    "SPY": "ETF"
+    "MSFT": "Technology",
+    "NVDA": "Technology",
+    "VTI": "ETF"
   },
   "portfolios": {
-    "2024-08-16": {
+    "2024-03-15": {
       "summary": {
-        "cash": 118.33,
-        "total_deposits": 39000.0,
-        "total_value": 48744.67202,
-        "total_market_value": 48626.34202,
-        "total_cost_basis": 40876.88142,
-        "total_unrealized_pnl": 7749.4606,
-        "total_unrealized_return": 0.189580524,
-        "total_realized_pnl": 1837.051419,
-        "total_realized_return": 0.04710388254,
-        "total_daily_change": 433.4006652,
-        "total_daily_return": 0.008971005173
+        "cash": 1523.45,
+        "total_deposits": 25000.0,
+        "total_value": 32567.89,
+        "total_market_value": 31044.44,
+        "total_cost_basis": 28765.32,
+        "total_unrealized_pnl": 2279.12,
+        "total_unrealized_return": 0.0792,
+        "total_realized_pnl": 987.65,
+        "total_realized_return": 0.0395,
+        "total_daily_change": 156.78,
+        "total_daily_return": 0.0048
       },
       "holdings": {
-        "TSLA": {
-          "quantity": 70.0,
-          "cost_basis": 14095.42,
-          "average_cost": 201.3631429,
-          "market_price": 216.1199951171875,
-          "market_value": 15128.39966,
-          "unrealized_pnl": 1032.97966,
-          "unrealized_return": 0.07328477335,
-          "daily_change": 138.5997,
-          "daily_return": 0.009246267487
+        "NVDA": {
+          "quantity": 20.0,
+          "cost_basis": 4500.0,
+          "average_cost": 225.0,
+          "market_price": 275.5,
+          "market_value": 5510.0,
+          "unrealized_pnl": 1010.0,
+          "unrealized_return": 0.2244,
+          "daily_change": 80.0,
+          "daily_return": 0.0147
         }
       },
       "closed_positions": {
-        "SONY": {
-          "close_date": "2023-10-24",
-          "quantity": 2.0,
-          "cost_basis": 165.8,
-          "realized_pnl": 1.93,
-          "realized_return": 0.01164053076
+        "AMZN": {
+          "close_date": "2023-11-30",
+          "quantity": 3.0,
+          "cost_basis": 300.0,
+          "realized_pnl": 90.0,
+          "realized_return": 0.3
         }
       },
       "partially_sold_positions": {
-        "TSLA": {
-          "last_sell_date": "2023-12-27",
-          "quantity": 5.0,
-          "cost_basis": 1078.73,
-          "realized_pnl": 221.25,
-          "realized_return": 0.2051022962
+        "MSFT": {
+          "last_sell_date": "2024-01-15",
+          "quantity": 2.0,
+          "cost_basis": 640.0,
+          "realized_pnl": 80.0,
+          "realized_return": 0.125
         }
       }
     }

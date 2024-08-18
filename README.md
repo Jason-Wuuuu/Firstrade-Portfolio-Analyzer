@@ -8,13 +8,9 @@
 - [Setup](#setup)
 - [Usage](#usage)
 - [Visualizations and Example Output](#visualizations-and-example-output)
-  - [Sample Visualizations](#sample-visualizations)
   - [Example HTML Output](#example-html-output)
+  - [Sample Visualizations](#sample-visualizations)
   - [Portfolio Analysis Tables](#portfolio-analysis-tables)
-    - [Portfolio Holdings](#portfolio-holdings)
-    - [Portfolio Summary](#portfolio-summary)
-    - [Closed Positions](#closed-positions)
-    - [Partially Sold Positions](#partially-sold-positions)
 - [Note](#note)
 - [Appendix: Output File Structures](#appendix-output-file-structures)
   - [transaction_history.json Structure](#transaction_historyjson-structure)
@@ -92,14 +88,23 @@ The scripts generate several output files:
 
 ## Visualizations and Example Output
 
-The notebook includes a range of interactive visualizations and tables, offering:
+The notebook provides interactive visualizations and tables including:
 
-- Portfolio composition and market value distribution
+- Portfolio composition and value distribution
 - Sector allocation analysis
-- Performance comparison against the S&P 500 index
-- Interactive features: zooming, panning, and data point hover-over details
-- Customizable date ranges for in-depth analysis
-- Sector-wise breakdown with detailed stock information on hover
+- Performance vs S&P 500
+- Interactive features (zoom, pan, hover details)
+- Customizable date ranges
+- Sector breakdown with stock details on hover
+
+These are compiled into an HTML report for easy viewing of portfolio performance and composition.
+
+### Example HTML Output
+
+To view an example HTML report:
+
+1. Check the `reports/` directory for files named `portfolio_report_YYYY-MM-DD.html`
+2. Open [this example report](reports/portfolio_report_2023-12-19.html) in your web browser
 
 ### Sample Visualizations:
 
@@ -110,9 +115,7 @@ The notebook includes a range of interactive visualizations and tables, offering
   <img src="./outputs/output3.png" style="width: 50%; height: auto;">
 </div>
 
-### Example HTML Output
-
-To see an example of the generated HTML report, check the `reports/` directory for files named like `portfolio_report_YYYY-MM-DD.html`. You can download and open these files with a web browser to view a comprehensive report of the portfolio analysis, including interactive charts and detailed tables.
+The report includes interactive charts and detailed portfolio tables.
 
 ### Portfolio Analysis Tables
 

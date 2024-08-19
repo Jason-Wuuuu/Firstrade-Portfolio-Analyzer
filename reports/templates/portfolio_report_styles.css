@@ -120,11 +120,11 @@ tr:hover {
   }
 
   .plot-scroll-container > div {
-    min-width: 500px; /* Adjust this value as needed */
+    min-width: 600px; /* Adjust this value as needed */
   }
 
   .wide-plot > div {
-    min-width: 700px; /* Adjust this value for the portfolio growth plot */
+    min-width: 800px; /* Adjust this value for the portfolio growth plot */
   }
 }
 

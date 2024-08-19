@@ -111,14 +111,11 @@ To view an example HTML report:
 
 ### Sample Visualizations:
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 800px; margin: 0 auto;">
-  <img src="./outputs/output1.png" style="width: 50%; height: auto;">
-  <img src="./outputs/output4.png" style="width: 50%; height: auto;">
-  <img src="./outputs/output2.png" style="width: 50%; height: auto;">
-  <img src="./outputs/output3.png" style="width: 50%; height: auto;">
-</div>
-
-The report includes interactive charts and detailed portfolio tables.
+|                                                |                                                |
+| :--------------------------------------------: | :--------------------------------------------: |
+| <img src="./outputs/output1.png" width="100%"> | <img src="./outputs/output4.png" width="100%"> |
+| <img src="./outputs/output2.png" width="100%"> | <img src="./outputs/output3.png" width="100%"> |
+|                                                |                                                |
 
 ### Portfolio Analysis Tables
 

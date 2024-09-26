@@ -103,11 +103,8 @@ These are compiled into an HTML report for easy viewing of portfolio performance
 
 To view an example HTML report:
 
-1. **Local file:**
-   Open [this example report](reports/portfolio_report_2023-12-19.html) in your web browser
-2. **Online demo:**
-   [link](https://jason-wuuuu.github.io/Jason/projects)
-   (Click the "demo" button on the `Firstrade Portfolio Analysis` project card)
+- [Link](https://jason-wuuuu.github.io/Jason/projects)
+  (Click the "demo" icon on the `Firstrade Portfolio Analysis` project card - left bottom next to github icon)
 
 ### Sample Visualizations:
 

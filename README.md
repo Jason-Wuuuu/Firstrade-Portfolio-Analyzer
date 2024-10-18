@@ -118,7 +118,7 @@ To view an example HTML report:
 
 #### Portfolio Holdings
 
-| Symbol | Quantity | Avg Cost  | Market Price | Total Cost | Market Value | Unrealized P/L   | Daily Change   |
+| Symbol | Quantity | Avg Cost  | Market Price | Total Cost | Market Value | Profit/Loss      | Daily Change   |
 | ------ | -------- | --------- | ------------ | ---------- | ------------ | ---------------- | -------------- |
 | AAPL   | 10.00    | $150.00   | $175.00      | $1,500.00  | $1,750.00    | $250.00 (16.67%) | $25.00 (1.43%) |
 | GOOGL  | 5.00     | $2,000.00 | $2,100.00    | $10,000.00 | $10,500.00   | $500.00 (5.00%)  | $50.00 (0.48%) |
@@ -130,21 +130,20 @@ To view an example HTML report:
 - Total Value: $32,567.89
 - Total Market Value: $31,044.44
 - Total Deposits: $25,000.00
-- Unrealized Profit/Loss: $2,279.12 (7.92%)
-- Realized Profit/Loss: $987.65 (3.95%)
+- Total Profit/Loss: $7,567.89 (30.27%)
 - Daily Gain: $156.78 (0.48%)
 
 #### Closed Positions
 
-| Symbol | Close Date | Quantity | Cost Basis | Realized P/L | Realized Return |
-| ------ | ---------- | -------- | ---------- | ------------ | --------------- |
-| AMZN   | 2023-11-30 | 3.0      | $300.00    | $90.00       | 30.00%          |
+| Symbol | Close Date | Quantity | Cost Basis | Profit/Loss | Return |
+| ------ | ---------- | -------- | ---------- | ----------- | ------ |
+| AMZN   | 2023-11-30 | 3.0      | $300.00    | $90.00      | 30.00% |
 
 #### Partially Sold Positions
 
-| Symbol | Last Sell Date | Quantity | Cost Basis | Realized P/L | Realized Return |
-| ------ | -------------- | -------- | ---------- | ------------ | --------------- |
-| MSFT   | 2024-01-15     | 2.0      | $640.00    | $80.00       | 12.50%          |
+| Symbol | Last Sell Date | Quantity | Cost Basis | Profit/Loss | Return |
+| ------ | -------------- | -------- | ---------- | ----------- | ------ |
+| MSFT   | 2024-01-15     | 2.0      | $640.00    | $80.00      | 12.50% |
 
 ## Note
 

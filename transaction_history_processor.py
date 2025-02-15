@@ -473,7 +473,7 @@ class PortfolioHistory:
                 raise ValueError("Failed to fetch historical data.")
 
             self.historical_data = self.historical_data.loc[:, (slice(
-                None), 'Adj Close')]
+                None), 'Close')]
             self.historical_data.columns = self.historical_data.columns.droplevel(
                 1)
 
